@@ -1,0 +1,10 @@
+@MatchingService_HostAddress = http://localhost:5003
+
+GET {{MatchingService_HostAddress}}/health
+
+###
+
+GET {{MatchingService_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###

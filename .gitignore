@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node / frontend
+node_modules/
+dist/
+*.local
+
+# Environment files (keep the .example templates)
+.env
+!.env.example
+
+# Editors / OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Test and experiment output
+tests/e2e/screenshots/
+experiments/results/*.json

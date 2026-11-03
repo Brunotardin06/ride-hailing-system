@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/services/">
+    <Project Path="src/services/AnalyticsService/AnalyticsService.csproj" />
+    <Project Path="src/services/DriverService/DriverService.csproj" />
+    <Project Path="src/services/MatchingService/MatchingService.csproj" />
+    <Project Path="src/services/RealtimeService/RealtimeService.csproj" />
+    <Project Path="src/services/RideService/RideService.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/RideHailing.Shared/RideHailing.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RideHailing.UnitTests/RideHailing.UnitTests.csproj" />
+  </Folder>
+</Solution>

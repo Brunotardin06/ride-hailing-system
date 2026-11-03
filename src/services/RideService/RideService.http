@@ -1,0 +1,10 @@
+@RideService_HostAddress = http://localhost:5001
+
+GET {{RideService_HostAddress}}/health
+
+###
+
+GET {{RideService_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###

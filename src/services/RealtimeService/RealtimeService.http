@@ -1,0 +1,10 @@
+@RealtimeService_HostAddress = http://localhost:5004
+
+GET {{RealtimeService_HostAddress}}/health
+
+###
+
+GET {{RealtimeService_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###

@@ -1,0 +1,10 @@
+@DriverService_HostAddress = http://localhost:5002
+
+GET {{DriverService_HostAddress}}/health
+
+###
+
+GET {{DriverService_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###

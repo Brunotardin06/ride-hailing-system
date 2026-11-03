@@ -1,0 +1,17 @@
+{
+  "name": "ride-hailing-e2e-tests",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests against the running system (REST, RabbitMQ, SignalR, Kafka, gRPC).",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:ui": "node ui.mjs",
+    "test:ui-experiments": "node ui-experiments.mjs"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^10.0.11"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

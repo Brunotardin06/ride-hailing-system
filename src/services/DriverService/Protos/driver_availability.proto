@@ -1,0 +1,32 @@
+// gRPC contract for the driver-availability lookup.
+// It is the exact equivalent of the REST call GET /api/drivers/available, so both can be compared.
+// DriverService implements the server; MatchingService compiles the client from this same file.
+syntax = "proto3";
+
+option csharp_namespace = "RideHailing.Grpc";
+
+package driveravailability;
+
+service DriverAvailability {
+  // Available drivers, longest-waiting first, excluding the given ids.
+  rpc GetAvailableDrivers (GetAvailableDriversRequest) returns (GetAvailableDriversReply);
+}
+
+message GetAvailableDriversRequest {
+  repeated string exclude_driver_ids = 1;
+  int32 max_results = 2;
+  bool experiment_pool = 3; // true = experiment drivers only (Experiment A), false = demo drivers
+}
+
+message AvailableDriver {
+  string id = 1;
+  string name = 2;
+  string vehicle = 3;
+  string license_plate = 4;
+  double rating = 5;
+  int64 available_since_unix_ms = 6; // 0 = unknown
+}
+
+message GetAvailableDriversReply {
+  repeated AvailableDriver drivers = 1;
+}
