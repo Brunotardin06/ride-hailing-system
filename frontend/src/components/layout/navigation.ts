@@ -23,6 +23,4 @@ export const navSections: NavSection[] = [
       { to: '/driver/chat', label: 'Chat', icon: 'chat' },
     ],
   },
-  // Experiments section temporarily hidden (the /experiments route and its code still exist). To restore:
-  // { title: 'Experiments', items: [{ to: '/experiments', label: 'Experiment dashboard', icon: 'chart' }] },
 ]

@@ -12,7 +12,7 @@ namespace RideHailing.Shared.Messaging;
 ///
 /// - Publishers only know the EXCHANGE, never the queues → adding a consumer does not change the publisher.
 /// - Every service declares the whole topology on connect (declaring is idempotent). So a queue exists, and
-///   buffers messages, even if its consumer has not started yet. This is what "lost 0 of 76" measured in v1.
+///   buffers messages, even if its consumer has not started yet.
 /// </summary>
 public static class RabbitMqTopology
 {

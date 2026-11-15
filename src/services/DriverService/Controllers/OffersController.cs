@@ -19,5 +19,5 @@ public class OffersController(OfferService offers) : ControllerBase
     public async Task<OfferDto> Reject(Guid offerId, OfferResponseRequest request, CancellationToken ct) =>
         OfferDto.From(await offers.RejectAsync(offerId, request.DriverId, ct));
 
-    // Offer creation is NOT a REST endpoint in v2: MatchingService creates offers via gRPC (later phase).
+    // Offer creation is NOT a REST endpoint: MatchingService creates offers via gRPC.
 }

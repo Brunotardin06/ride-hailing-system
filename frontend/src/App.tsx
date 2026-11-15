@@ -13,7 +13,6 @@ import DriverDashboardPage from './features/driver/DriverDashboardPage'
 import IncomingRequestsPage from './features/driver/IncomingRequestsPage'
 import ActiveRidePage from './features/driver/ActiveRidePage'
 import DriverChatPage from './features/driver/DriverChatPage'
-import ExperimentDashboardPage from './features/experiments/ExperimentDashboardPage'
 
 export default function App() {
   return (
@@ -39,7 +38,6 @@ export default function App() {
             <Route path="chat" element={<DriverChatPage />} />
           </Route>
 
-          <Route path="experiments" element={<ExperimentDashboardPage />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Route>

@@ -15,9 +15,6 @@ const areas: { to: string; icon: IconName; title: string; text: string }[] = [
     title: 'Driver',
     text: 'Go online, receive incoming ride requests, manage the active ride and chat.',
   },
-  // Experiment dashboard card temporarily hidden (route /experiments still exists). To restore, add back:
-  // { to: '/experiments', icon: 'chart', title: 'Experiment dashboard',
-  //   text: 'Observe events and metrics and compare REST, gRPC, RabbitMQ, Kafka and SignalR.' },
 ]
 
 export default function HomePage() {

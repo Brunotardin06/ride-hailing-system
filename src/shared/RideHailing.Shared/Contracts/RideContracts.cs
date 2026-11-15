@@ -12,7 +12,7 @@ public sealed record RideRequestedPayload(
     string Pickup,
     string Destination,
     DateTimeOffset RequestedAt,
-    // Coordinates chosen on the map (added in v2; optional so older messages still deserialize).
+    // Coordinates chosen on the map (optional so older messages still deserialize).
     double? PickupLat = null,
     double? PickupLng = null,
     double? DestinationLat = null,

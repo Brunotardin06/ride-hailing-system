@@ -69,11 +69,7 @@ export default function CurrentRidePage() {
           {ride.status === 'Requested' && (
             <div className="searching">
               <span className="pulse" />
-              {ride.offerCreatedAt
-                ? `Offer sent to ${ride.offeredDriverName ?? 'a driver'} — waiting for the answer…`
-                : ride.matchingMode === 'RabbitMq'
-                  ? 'Request received — looking for a driver…'
-                  : 'Looking for a driver…'}
+              Request received — looking for a driver…
             </div>
           )}
           <RideTimeline ride={ride} />

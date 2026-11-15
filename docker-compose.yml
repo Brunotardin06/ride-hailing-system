@@ -1,4 +1,4 @@
-# Ride-Hailing System (v2): infrastructure + the 4 backend services.
+# Ride-Hailing System: infrastructure + the 4 backend services.
 #   Start everything:        docker compose up -d --build
 #   After a code change:     docker compose up -d --build <service>   (e.g. ride-service)
 #   Logs of one service:     docker compose logs -f ride-service

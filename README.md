@@ -1,14 +1,13 @@
-# Distributed Ride-Hailing System (v2)
+# Distributed Ride-Hailing System
 
 Fontys · Complex Software Systems · Personal Experiment 1.
 
 A passenger requests a ride, the system offers it to the nearest available driver, the driver accepts, and both
 follow the ride live (status, chat, driver position on a map). Four ASP.NET Core services communicate through
-REST, gRPC, RabbitMQ, Kafka and SignalR; each communication was chosen from the v1 experiment results.
+REST, gRPC, RabbitMQ, Kafka and SignalR; each one is used where it fits the interaction best.
 
-- **Why each communication was chosen:** [docs/communication-decisions.md](docs/communication-decisions.md)
-- **Architecture diagram:** [docs/architecture-v2.drawio](docs/architecture-v2.drawio) (open in draw.io / diagrams.net)
-- **v1 measurements:** `research/v1-results/` · v1 code: git tag `full-implementation`
+- **About the project:** [docs/README.md](docs/README.md)
+- **Architecture diagram:** [docs/architecture.drawio](docs/architecture.drawio) (open in draw.io / diagrams.net)
 
 ## Structure
 
@@ -19,7 +18,7 @@ src/services/RideService       :5001 REST · :5011 gRPC   rides + lifecycle     
 src/services/DriverService     :5002 REST · :5012 gRPC   drivers + offers           (db: drivers)
 src/services/MatchingService   :5003                     picks the nearest driver   (stateless)
 src/services/RealtimeService   :5004 SignalR /hubs/rides  notifications, chat, live location
-docs/                          communication decisions + architecture diagram
+docs/                          project overview, architecture diagram, experiment tools
 ```
 
 Inside each service: `Controllers/` (REST in), `Grpc/` (gRPC in), `Messaging/` (RabbitMQ/Kafka in),

@@ -21,7 +21,7 @@ public interface IRideClient
 ///   Register(role, userId)  → join the personal group "passenger:&lt;id&gt;" / "driver:&lt;id&gt;"
 ///   JoinRideChat(rideId)    → join the chat group of a ride, get the history back
 ///   SendChatMessage(...)    → pushed to the other participant
-///   Acknowledge(id)         → client confirms it received a message (kept for the frontend; no-op in v2)
+///   Acknowledge(id)         → client confirms it received a message (no-op)
 ///   UpdateLocation(...)     → driver's simulated GPS → Kafka "driver-locations"
 ///
 /// Business actions (request, accept, start, …) are NOT done here: they go via REST to the owning service.
@@ -88,7 +88,7 @@ public class RideHub(ConnectionRegistry registry, ChatHistory chatHistory, Drive
         return message;                                         // the sender gets it back as the return value
     }
 
-    /// <summary>The frontend acknowledges every message (v1 used it to measure delivery). Kept so the call succeeds.</summary>
+    /// <summary>The frontend acknowledges every message. Kept so the call succeeds; nothing is done with it.</summary>
     public void Acknowledge(Guid messageId) { }
 
     // SignalR removes the connection from its groups automatically; we clean our own registry.

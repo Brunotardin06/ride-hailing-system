@@ -1,9 +1,9 @@
 // gRPC contract of DriverService. DriverService implements the server;
 // MatchingService compiles the client from THIS same file (single source of truth, see MatchingService.csproj).
 //
-// Why gRPC here (see docs/communication-decisions.md): Matching needs an answer NOW to continue
+// Why gRPC here: Matching needs an answer NOW to continue
 // ("who is available?", "was the offer created?"), and a typed contract catches mismatches at compile time.
-// Note: v1 measured no speed gain vs REST, so the reason is the contract, not performance.
+// Note: gRPC was not faster than REST in our measurements, so the reason is the contract, not performance.
 syntax = "proto3";
 
 option csharp_namespace = "RideHailing.Grpc.Drivers";
