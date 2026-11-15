@@ -1,0 +1,132 @@
+ExperimentType,ScenarioKey,Mechanism,Status,StartedAt,Count,Errors,AvgMs,P50Ms,P95Ms,P99Ms,MaxMs,ThroughputPerSecond,Scenario
+A,A1-normal,REST,Completed,2026-11-01 21:31:46.724776+00,5,0,40.84,14.3,149.1,149.1,149.1,,A1-normal
+A,A1-normal,RabbitMQ,Completed,2026-11-01 21:31:53.12444+00,5,0,23.86,17.3,49.4,49.4,49.4,,A1-normal
+A,A2-unavailable,REST,Completed,2026-11-01 21:32:04.828072+00,5,5,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:43:11.697861+00,5,5,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:50:39.547756+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:51:18.959024+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:52:00.807175+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:53:30.12742+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:55:40.460277+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 21:57:25.265784+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 22:09:55.364459+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 22:10:36.329516+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 22:12:40.657313+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 22:14:25.490793+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,REST,Completed,2026-11-01 22:16:13.592427+00,3,3,,,,,,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:32:20.415423+00,5,0,7435.62,7436.1,8017.3,8017.3,8017.3,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:43:38.248424+00,5,0,16598.22,16605.6,17159.7,17159.7,17159.7,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:50:52.155551+00,3,0,4699.53,4700.3,4986.2,4986.2,4986.2,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:51:31.545903+00,3,0,4712.93,4710.5,4994.4,4994.4,4994.4,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:52:13.40478+00,3,0,4702.63,4702,4990.4,4990.4,4990.4,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:53:42.708788+00,3,0,4819.93,4822.4,5002.5,5002.5,5002.5,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:55:53.201455+00,3,0,4815.07,4814.9,5009.7,5009.7,5009.7,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 21:57:37.862337+00,3,0,4814.8,4817.1,5003.6,5003.6,5003.6,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 22:10:08.181047+00,3,0,4812.9,4813.1,4998.9,4998.9,4998.9,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 22:10:48.973012+00,3,0,4706.47,4704.2,4997.5,4997.5,4997.5,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 22:12:53.407627+00,3,0,4822.63,4825.7,5010.7,5010.7,5010.7,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 22:14:38.081424+00,3,0,4810.03,4811.3,4997.2,4997.2,4997.2,,A2-unavailable
+A,A2-unavailable,RabbitMQ,Completed,2026-11-01 22:16:26.240527+00,3,0,4709.9,4711.9,4994.3,4994.3,4994.3,,A2-unavailable
+A,A3-slow,REST,Completed,2026-11-01 21:32:43.656498+00,5,5,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 21:34:48.464859+00,5,5,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 21:36:33.226152+00,5,5,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 21:53:50.722082+00,3,3,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 21:56:01.272207+00,3,3,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 21:57:45.796926+00,3,3,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 22:13:01.405107+00,3,3,,,,,,,A3-slow
+A,A3-slow,REST,Completed,2026-11-01 22:14:45.985089+00,3,3,,,,,,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 21:32:59.567204+00,5,0,11433.04,11431.7,18852.6,18852.6,18852.6,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 21:35:04.786603+00,5,0,11535.82,11550.3,19007.8,19007.8,19007.8,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 21:54:01.257318+00,3,0,2847.83,2846.4,4171.7,4171.7,4171.7,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 21:56:11.804663+00,3,0,2828.1,2833.2,4139.9,4139.9,4139.9,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 21:57:56.342159+00,3,0,2835.97,2839.3,4147.9,4147.9,4147.9,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 22:13:11.941857+00,3,0,2821.43,2822.2,4129.6,4129.6,4129.6,,A3-slow
+A,A3-slow,RabbitMQ,Completed,2026-11-01 22:14:56.558692+00,3,0,2841.53,2852.5,4161.2,4161.2,4161.2,,A3-slow
+B,B1-single,Kafka,Completed,2026-11-01 21:36:56.169941+00,190,0,539.744,539.834,1029.871,1079.698,1086.551,142.4,B1-single
+B,B1-single,Kafka,Completed,2026-11-01 21:38:08.584112+00,190,0,2.334,2.07,3.839,9.017,17.804,496.5,B1-single
+B,B1-single,RabbitMQ,Completed,2026-11-01 21:36:53.661735+00,190,0,-0.32,-0.323,-0.156,0.441,2.406,886.8,B1-single
+B,B1-single,RabbitMQ,Completed,2026-11-01 21:38:05.862028+00,190,0,1.114,0.875,1.287,5.097,31.454,696.7,B1-single
+B,B2-multiple,Kafka,Completed,2026-11-01 21:37:02.061755+00,190,0,521.53,512.242,1000.736,1042.6,1047.604,151.2,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 21:40:21.245698+00,190,0,1.383,1.27,2.437,2.853,2.853,311.3,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 21:54:11.289641+00,76,0,1.343,1.233,1.876,7.641,7.641,919.1,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 21:56:21.932738+00,76,0,2.042,1.462,3.703,19.435,19.435,502.5,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 21:58:06.5675+00,76,0,1.259,1.135,1.806,5.219,5.219,936.7,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 22:03:36.916374+00,190,0,1.125,0.923,1.718,11.192,11.192,436.5,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 22:13:22.142623+00,76,0,1.096,0.942,1.391,10.982,10.982,934.4,B2-multiple
+B,B2-multiple,Kafka,Completed,2026-11-01 22:15:06.792169+00,76,0,1.502,1.389,2.33,6.388,6.388,857.1,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 21:36:58.919198+00,190,0,-0.894,-0.849,-0.414,-0.19,-0.185,423.9,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 21:40:18.43891+00,190,0,0.634,0.612,0.844,1.451,1.451,499.9,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 21:54:08.59359+00,76,0,0.943,0.922,1.352,1.727,1.727,670.7,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 21:56:19.102899+00,76,0,1.331,0.985,1.878,20.077,20.077,519.1,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 21:58:03.872516+00,76,0,0.86,0.764,1.694,2.396,2.396,748.2,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 22:03:33.694892+00,190,0,1.035,0.79,1.462,17.091,17.091,352.4,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 22:13:19.318835+00,76,0,1.527,1.084,3.162,17.194,17.194,485.6,B2-multiple
+B,B2-multiple,RabbitMQ,Completed,2026-11-01 22:15:04.108893+00,76,0,0.938,0.928,1.27,1.576,1.576,687.7,B2-multiple
+B,B3-offline,Kafka,Completed,2026-11-01 21:38:24.80031+00,190,0,2.113,1.729,4.164,4.941,6.986,42,B3-offline
+B,B3-offline,Kafka,Completed,2026-11-01 21:40:11.963513+00,190,0,2.423,1.997,4.974,7.504,16.524,,B3-offline
+B,B3-offline,Kafka,Completed,2026-11-01 21:54:17.424546+00,76,0,2.607,1.435,4.633,39.616,39.616,,B3-offline
+B,B3-offline,Kafka,Completed,2026-11-01 21:56:28.700612+00,76,0,2.417,1.676,5.616,10.728,10.728,,B3-offline
+B,B3-offline,Kafka,Completed,2026-11-01 21:58:13.473175+00,76,0,1.815,1.456,4.527,11.015,11.015,,B3-offline
+B,B3-offline,Kafka,Completed,2026-11-01 22:13:28.914918+00,76,0,1.583,1.46,2.169,4.77,4.77,,B3-offline
+B,B3-offline,Kafka,Completed,2026-11-01 22:15:13.404484+00,76,0,2.38,1.962,4.867,7.518,7.518,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:38:17.883569+00,190,0,1.4,1.227,2.219,4.932,12.798,43.3,B3-offline
+B,B3-offline,RabbitMQ,Failed,2026-11-01 21:38:31.216265+00,0,0,,,,,,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:39:44.705846+00,190,95,1.343,0.976,2.639,6.418,33.38,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:54:12.802198+00,76,0,1.192,1.099,1.759,2.667,2.667,,B3-offline
+B,B3-offline,RabbitMQ,Failed,2026-11-01 21:54:21.195754+00,0,0,,,,,,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:56:23.586525+00,76,0,1.428,1.321,3.263,3.478,3.478,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:56:33.037394+00,76,38,0.803,0.784,1.139,1.743,1.743,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:58:08.338973+00,76,0,1.674,1.441,4.146,4.382,4.382,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 21:58:17.633025+00,76,38,0.959,0.886,1.758,2.216,2.216,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 22:13:23.80317+00,76,0,1.571,1.549,2.482,2.756,2.756,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 22:13:33.013906+00,76,38,1.056,0.939,1.856,2.31,2.31,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 22:15:08.34373+00,76,0,1.264,1.117,2.11,3.928,3.928,,B3-offline
+B,B3-offline,RabbitMQ,Completed,2026-11-01 22:15:17.610999+00,76,38,1.109,0.845,2.3,2.735,2.735,,B3-offline
+B,B4-replay,Kafka,Completed,2026-11-01 21:38:41.195118+00,190,0,5.164,4.242,10.685,18.009,55.482,259,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 21:51:10.228058+00,190,0,1.306,1.177,1.843,2.422,12.69,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 21:51:49.344449+00,190,0,1.211,1.056,2.081,3.523,7.021,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 21:52:31.22856+00,190,0,1.16,1.055,1.852,2.713,6.06,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 21:57:04.684945+00,76,0,1.95,1.501,3.925,10.15,10.15,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 21:58:49.375213+00,76,0,1.069,0.98,1.451,4.772,4.772,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 22:11:08.679303+00,190,0,0.874,0.79,1.243,1.8,8.416,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 22:14:04.822776+00,76,0,0.757,0.711,0.939,3.538,3.538,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 22:15:49.457235+00,76,0,1.121,1.006,1.755,4.307,4.307,,B4-replay
+B,B4-replay,Kafka,Completed,2026-11-01 22:16:45.491384+00,190,0,1.508,1.404,2.248,2.901,5.238,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 21:38:32.415612+00,190,190,0.585,0.579,0.736,0.856,0.866,1010.1,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 21:51:01.433414+00,190,190,0.923,0.716,1.091,4.17,25.497,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 21:51:40.643589+00,190,190,0.787,0.74,1.084,1.511,1.661,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 21:52:22.557698+00,190,190,0.685,0.647,0.947,1.614,1.987,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 21:56:56.133251+00,76,76,0.94,0.898,1.281,3.098,3.098,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 21:58:40.819736+00,76,76,1.068,0.941,1.859,2.1,2.1,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 22:10:59.863813+00,190,190,0.969,0.903,1.674,1.983,2.491,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 22:13:56.301522+00,76,76,0.733,0.678,1.104,1.366,1.366,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 22:15:40.874165+00,76,76,0.968,0.868,1.432,4.426,4.426,,B4-replay
+B,B4-replay,RabbitMQ,Completed,2026-11-01 22:16:36.718756+00,190,190,0.822,0.775,1.201,1.398,2.005,,B4-replay
+tool,,REST,Completed,2026-11-01 19:59:18.773117+00,200,0,3.599,2.948,5.795,10.851,32.247,276.76,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 19:59:45.547181+00,37791,0,3.656,3.195,6.427,10.066,105.455,2519.36,"k6 constant load: 10 VUs for 15s, k6 container → driver-service"
+tool,,REST,Completed,2026-11-01 20:00:58.280603+00,200,0,3.953,3.666,4.981,11.406,41.629,252.81,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 20:01:23.371739+00,200,0,2.645,2.405,4.155,6.956,9.998,377.86,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 20:01:43.09406+00,200,0,1.603,1.523,2.112,3.271,4.202,623.67,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 21:16:00.461503+00,200,0,1.584,1.446,2.141,3.343,15.721,627.69,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 21:31:24.992609+00,200,0,3.46,2.83,5.862,9.117,19.855,288.08,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 21:53:21.644879+00,200,0,1.748,1.627,2.535,3.188,5.193,566.21,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 21:55:32.457737+00,200,0,1.642,1.61,1.954,2.443,4.458,608.77,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 21:57:15.079146+00,200,0,1.604,1.575,1.907,2.137,3.807,623.18,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 22:09:47.223379+00,200,0,2.258,2.047,3.625,4.369,6.536,442.63,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 22:12:30.168913+00,200,0,2.123,2.102,2.696,3.949,5.587,470.68,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,REST,Completed,2026-11-01 22:14:15.159398+00,200,0,1.442,1.414,1.794,2.042,3.356,692.51,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,RabbitMQ,Completed,2026-11-01 20:01:55.321+00,5,0,12185.2,12185,12207,12207,12207,0.41,MatchingService stopped for 10s while 5 rides were requested
+tool,,RabbitMQ,Completed,2026-11-01 20:02:46.063+00,5,0,17062.6,17061,17081,17081,17081,0.29,MatchingService stopped for 15s while 5 rides were requested
+tool,,gRPC,Completed,2026-11-01 19:59:18.773117+00,200,0,3.378,3.322,4.188,4.553,4.974,295.81,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 20:00:01.478039+00,28855,0,4.784,4.04,9.243,15.493,63.502,1922.24,"k6 constant load: 10 VUs for 15s, k6 container → driver-service"
+tool,,gRPC,Completed,2026-11-01 20:00:58.280603+00,200,0,5.416,5.372,6.653,7.582,10.284,184.54,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 20:01:23.371739+00,200,0,2.79,2.454,3.978,4.508,33.581,358.27,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 20:01:43.09406+00,200,0,1.684,1.61,2.103,2.346,3.24,593.54,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 21:16:00.461503+00,200,0,1.694,1.579,1.986,6.704,8.771,589.85,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 21:31:24.992609+00,200,0,3.901,3.656,5.451,6.356,11.989,256.02,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 21:53:21.644879+00,200,0,2.083,1.979,2.406,2.936,15.357,479.66,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 21:55:32.457737+00,200,0,1.765,1.709,2.239,2.421,4.248,566.2,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 21:57:15.079146+00,200,0,1.837,1.76,2.205,3.313,10.849,544.19,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 22:09:47.223379+00,200,0,2.556,2.505,3.402,4.195,5.824,390.86,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 22:12:30.168913+00,200,0,2.777,2.454,4.072,10.606,15.114,359.97,"200 calls, concurrency 1, 2 alternating rounds"
+tool,,gRPC,Completed,2026-11-01 22:14:15.159398+00,200,0,1.603,1.511,1.914,2.66,11.746,623.46,"200 calls, concurrency 1, 2 alternating rounds"

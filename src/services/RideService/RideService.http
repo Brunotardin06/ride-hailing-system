@@ -1,10 +1,57 @@
-@RideService_HostAddress = http://localhost:5001
+@host = http://localhost:5001
+@passenger = 33333333-3333-3333-3333-000000000001
+@emma = 11111111-1111-1111-1111-000000000001
 
-GET {{RideService_HostAddress}}/health
+GET {{host}}/health
+
+###
+
+# Passenger requests a ride (copy the "id" from the response)
+POST {{host}}/api/rides
+Content-Type: application/json
+
+{
+  "passengerId": "{{passenger}}",
+  "passengerName": "Test passenger",
+  "pickup": "Fontys R10, Eindhoven",
+  "destination": "Eindhoven Centraal"
+}
 
 ###
 
-GET {{RideService_HostAddress}}/openapi/v1.json
-Accept: application/json
+@rideId = paste-ride-id-here
+
+GET {{host}}/api/rides/{{rideId}}
 
 ###
+
+# History of the passenger
+GET {{host}}/api/rides?passengerId={{passenger}}&limit=10
+
+###
+
+# Active ride (204 if none)
+GET {{host}}/api/rides/active?passengerId={{passenger}}
+
+###
+
+# (A driver is assigned via gRPC when they accept an offer in DriverService.)
+
+POST {{host}}/api/rides/{{rideId}}/start
+Content-Type: application/json
+
+{ "driverId": "{{emma}}" }
+
+###
+
+POST {{host}}/api/rides/{{rideId}}/complete
+Content-Type: application/json
+
+{ "driverId": "{{emma}}" }
+
+###
+
+POST {{host}}/api/rides/{{rideId}}/cancel
+Content-Type: application/json
+
+{ "passengerId": "{{passenger}}", "reason": "Changed my mind" }

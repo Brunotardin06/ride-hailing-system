@@ -4,6 +4,7 @@ using RabbitMQ.Client;
 
 namespace RideHailing.Shared.Messaging;
 
+/// <summary>"RabbitMQ" section of appsettings.json.</summary>
 public sealed class RabbitMqOptions
 {
     public string Host { get; set; } = "localhost";
@@ -11,15 +12,19 @@ public sealed class RabbitMqOptions
     public string Username { get; set; } = "guest";
     public string Password { get; set; } = "guest";
 
-    /// <summary>How often a failing message is re-delivered before it goes to the dead-letter queue.</summary>
+    /// <summary>How often a failing message is retried before it goes to the dead-letter queue.</summary>
     public int MaxRetries { get; set; } = 3;
 
+    /// <summary>How many unacknowledged messages a consumer may hold at once.</summary>
     public ushort PrefetchCount { get; set; } = 10;
 }
 
+/// <summary>Name of the running service ("ride-service", …): used as message Source and connection name.</summary>
+public sealed record ServiceIdentity(string Name);
+
 /// <summary>
-/// One long-lived RabbitMQ connection per service (connections are expensive; channels are cheap).
-/// Connects lazily and keeps retrying while the broker is not reachable yet.
+/// One long-lived connection per service (a connection is a TCP socket: expensive; channels inside it are cheap).
+/// Connects on first use and keeps retrying while the broker is not reachable yet.
 /// </summary>
 public sealed class RabbitMqConnection(IOptions<RabbitMqOptions> options, ServiceIdentity identity, ILogger<RabbitMqConnection> logger)
     : IAsyncDisposable
@@ -43,8 +48,8 @@ public sealed class RabbitMqConnection(IOptions<RabbitMqOptions> options, Servic
                 Port = o.Port,
                 UserName = o.Username,
                 Password = o.Password,
-                ClientProvidedName = identity.Name,
-                AutomaticRecoveryEnabled = true, // reconnect automatically if the broker restarts
+                ClientProvidedName = identity.Name,   // visible in the management UI → Connections
+                AutomaticRecoveryEnabled = true,      // reconnect automatically if the broker restarts
                 TopologyRecoveryEnabled = true,
             };
 
@@ -78,6 +83,3 @@ public sealed class RabbitMqConnection(IOptions<RabbitMqOptions> options, Servic
         if (_connection is not null) await _connection.DisposeAsync();
     }
 }
-
-/// <summary>The name of the running service, used in logs, messages and metrics.</summary>
-public sealed record ServiceIdentity(string Name);

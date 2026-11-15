@@ -1,69 +1,35 @@
-// MatchingService — matches ride requests to available drivers. Stateless (no database).
-// In: RabbitMQ (asynchronous matching) or REST POST /api/matching/requests (synchronous matching, Experiment A).
-// Out: REST or gRPC driver lookup (switchable), REST offer creation, RabbitMQ results. See README.md.
+// MatchingService — Port 5003 (health only). Stateless: no database, no REST API for the frontend.
+// Input:  RabbitMQ queue "matching-service" (ride.requested, driver.rejected-ride), Kafka "driver-locations"
+// Output: gRPC calls to DriverService (lookup + create offer) and ride.matching-failed on RabbitMQ.
 
-using System.Text.Json.Serialization;
 using MatchingService.Messaging;
 using MatchingService.Services;
-using RideHailing.Grpc;
+using RideHailing.Grpc.Drivers;
 using RideHailing.Shared.Hosting;
+using RideHailing.Shared.Kafka;
 using RideHailing.Shared.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
-builder.Services.AddFrontendCors(builder.Configuration);
-builder.Services.AddApiExceptionHandling();
 
-// Two instances run from this code: "Main" for demo rides, "Experiment" for Experiment A (see MatchingOptions.Instance).
-var matchingOptions = builder.Configuration.GetSection("Matching").Get<MatchingOptions>() ?? new MatchingOptions();
-builder.Services.AddServiceIdentity(matchingOptions.IsExperimentInstance ? "matching-experiment" : MatchingWorkflow.Source);
-builder.Services.Configure<MatchingOptions>(builder.Configuration.GetSection("Matching"));
-builder.Services.AddSingleton<MatchingService.Controllers.SimulatedOutage>();
-builder.Services.AddSingleton<MatchingStats>();
-builder.Services.Configure<DriverLookupOptions>(builder.Configuration.GetSection("DriverLookup"));
+builder.Services.AddScoped<MatchingWorkflow>();
+builder.Services.AddSingleton<ProcessedMessageCache>(); // singleton: the memory must outlive one message
 
-// Synchronous clients for DriverService: REST (HTTP/1.1) and gRPC (HTTP/2) for the same lookup.
-var driverServiceUrl = new Uri(builder.Configuration["ServiceUrls:DriverService"]!);
-var driverServiceGrpcUrl = new Uri(builder.Configuration["ServiceUrls:DriverServiceGrpc"]!);
-builder.Services.AddHttpClient<RestDriverDirectory>(c => { c.BaseAddress = driverServiceUrl; c.Timeout = TimeSpan.FromSeconds(5); });
-builder.Services.AddGrpcClient<DriverAvailability.DriverAvailabilityClient>(o => o.Address = driverServiceGrpcUrl);
-builder.Services.AddTransient<GrpcDriverDirectory>();
-builder.Services.AddTransient<IDriverDirectory>(sp => sp.GetRequiredService<RestDriverDirectory>());
-builder.Services.AddTransient<IDriverDirectory>(sp => sp.GetRequiredService<GrpcDriverDirectory>());
-builder.Services.AddTransient<DriverLookup>();
-builder.Services.AddHttpClient<OfferClient>(c => { c.BaseAddress = driverServiceUrl; c.Timeout = TimeSpan.FromSeconds(5); });
+// gRPC client → DriverService:5012. Generated from DriverService/Protos/drivers.proto (see MatchingService.csproj).
+builder.Services.AddGrpcClient<Drivers.DriversClient>(o => o.Address = new Uri(builder.Configuration["ServiceUrls:DriverServiceGrpc"]!));
+builder.Services.AddTransient<DriverDirectory>();
+builder.Services.AddTransient<OfferClient>();
 
-builder.Services.AddTransient<MatchingWorkflow>();
-builder.Services.AddTransient<DriverLookupBenchmark>();
-builder.Services.AddHttpClient(DriverLookupBenchmark.AnalyticsClient, c =>
-{
-    c.BaseAddress = new Uri(builder.Configuration["Metrics:AnalyticsUrl"]!);
-    c.Timeout = TimeSpan.FromSeconds(60);
-});
+// Kafka: read driver positions (own consumer group) → last known position per driver → nearest driver.
+builder.Services.AddSingleton<DriverLocationCache>();
+builder.Services.AddDriverLocationConsumer<MatchingLocationHandler>(builder.Configuration, groupId: "matching-service");
 
-builder.Services.AddSingleton<ProcessedMessageCache>();
-builder.Services.AddRabbitMq(builder.Configuration);
-builder.Services.AddRabbitMqConsumer<MatchingMessageHandler>(matchingOptions.IsExperimentInstance
-    ? RabbitMqTopology.Queues.MatchingExperiment
-    : RabbitMqTopology.Queues.MatchingService);
-builder.Services.AddMetricsReporter(builder.Configuration);
+builder.Services.AddRabbitMq(builder.Configuration, MatchingWorkflow.Source);
+builder.Services.AddRabbitMqConsumer<MatchingMessageHandler>(RabbitMqTopology.Queues.MatchingService);
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    // OpenAPI document: /openapi/v1.json
-    app.MapOpenApi();
-}
-
-app.UseExceptionHandler();
-app.UseCors();
-
-app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();

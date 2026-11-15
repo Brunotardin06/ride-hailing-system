@@ -1,8 +1,8 @@
 namespace RideHailing.Shared.Messaging;
 
 /// <summary>
-/// In-memory duplicate detection for the stateless services (MatchingService, RealtimeService).
-/// Remembers the most recent event ids; services with a database store processed ids in a table instead.
+/// In-memory duplicate detection for services WITHOUT a database (MatchingService, RealtimeService).
+/// Remembers the most recent event ids. Services with a database use the inbox table instead (Outbox.cs).
 /// Limitation: the memory is lost on restart.
 /// </summary>
 public sealed class ProcessedMessageCache(int capacity = 10_000)

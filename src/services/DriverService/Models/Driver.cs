@@ -11,11 +11,13 @@ public enum DriverStatus
 }
 
 /// <summary>
-/// A driver and their availability:
+/// A driver and their availability (state machine):
 ///
 ///   Offline ⇄ Available ──offer──► Offered ──accept──► Busy ──ride completed/cancelled──► Available
 ///                 ▲                  │
 ///                 └──reject/expire───┘
+///
+/// The setters are private: the state can only change through the methods below, which check the rules.
 /// </summary>
 public class Driver
 {
@@ -35,24 +37,23 @@ public class Driver
     public int CompletedRides { get; private set; }
 
     /// <summary>
-    /// Experiment pool: hidden test drivers used only by Experiment A rides, so experiments never reserve
-    /// the demo drivers.
+    /// Optimistic concurrency token (PostgreSQL xmin). If two requests change the same driver at the same time,
+    /// the second SaveChanges fails (→ 409) instead of silently overwriting the first.
     /// </summary>
-    public bool IsExperimentDriver { get; set; }
-
-    /// <summary>Optimistic concurrency token (xmin): two offers can never reserve the same driver.</summary>
     public uint Version { get; private set; }
 
-    public static Driver Seed(Guid id, string name, string vehicle, string plate, double rating, DriverStatus status, DateTimeOffset? availableSince, bool experiment = false) => new()
+    public static Driver Seed(Guid id, string name, string vehicle, string plate, double rating,
+        DriverStatus status, DateTimeOffset? availableSince) => new()
     {
-        Id = id, Name = name, Vehicle = vehicle, LicensePlate = plate, Rating = rating, Status = status, AvailableSince = availableSince,
-        IsExperimentDriver = experiment,
+        Id = id, Name = name, Vehicle = vehicle, LicensePlate = plate, Rating = rating,
+        Status = status, AvailableSince = availableSince,
     };
 
     public void SetAvailability(bool available)
     {
         if (Status is DriverStatus.Offered or DriverStatus.Busy)
             throw new ConflictException($"Cannot change availability while {Status}.");
+
         if (available && Status == DriverStatus.Offline)
         {
             Status = DriverStatus.Available;
@@ -80,7 +81,7 @@ public class Driver
         Status = DriverStatus.Busy;
     }
 
-    /// <summary>Back to Available after a rejected/expired/cancelled offer or a cancelled ride.</summary>
+    /// <summary>Back to Available after a rejected/expired offer or a cancelled ride.</summary>
     public void Release(Guid rideId)
     {
         if (CurrentRideId != rideId) return;

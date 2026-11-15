@@ -3,7 +3,7 @@ using RideHailing.Shared.Messaging;
 
 namespace DriverService.Messaging;
 
-/// <summary>Handles messages from the "driver-service" RabbitMQ queue: frees drivers when rides end.</summary>
+/// <summary>Handles messages from queue "driver-service" (bindings in RabbitMqTopology). Only routes to OfferService.</summary>
 public class DriverMessageHandler(OfferService offers, ILogger<DriverMessageHandler> logger) : IMessageHandler
 {
     public Task HandleAsync(MessageEnvelope message, CancellationToken ct) => message.EventType switch
@@ -15,7 +15,7 @@ public class DriverMessageHandler(OfferService offers, ILogger<DriverMessageHand
 
     private Task Ignore(MessageEnvelope message)
     {
-        logger.LogWarning("Ignoring unexpected event type {EventType}", message.EventType);
+        logger.LogWarning("Unexpected event type {EventType}; ignoring", message.EventType);
         return Task.CompletedTask;
     }
 }

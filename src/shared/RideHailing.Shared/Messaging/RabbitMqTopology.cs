@@ -3,15 +3,16 @@ using RabbitMQ.Client;
 namespace RideHailing.Shared.Messaging;
 
 /// <summary>
-/// The complete RabbitMQ topology in one place.
+/// The whole RabbitMQ setup in one place:
 ///
-///   publisher ──► exchange "ridehailing.events" (topic) ──routing key = event type──► queue per consuming service
-///                                                                                       │ (rejected after retries)
+///   publisher ──► exchange "ridehailing.events" (topic) ──routing key = event type──► one queue per consuming service
+///                                                                                       │ (failed after retries)
 ///                                                                                       ▼
-///                                         exchange "ridehailing.dead-letter" (direct) ──► "&lt;queue&gt;.dlq"
+///                                       exchange "ridehailing.dead-letter" (direct) ──► "&lt;queue&gt;.dlq"
 ///
-/// Every service declares the whole topology when it connects. Declarations are idempotent, and this way
-/// queues exist (and buffer messages) even if the consuming service has not started yet.
+/// - Publishers only know the EXCHANGE, never the queues → adding a consumer does not change the publisher.
+/// - Every service declares the whole topology on connect (declaring is idempotent). So a queue exists, and
+///   buffers messages, even if its consumer has not started yet. This is what "lost 0 of 76" measured in v1.
 /// </summary>
 public static class RabbitMqTopology
 {
@@ -24,22 +25,19 @@ public static class RabbitMqTopology
         public const string DriverService = "driver-service";
         public const string MatchingService = "matching-service";
         public const string RealtimeService = "realtime-service";
-
-        /// <summary>Experiment A: consumed only by the dedicated experiment instance of MatchingService.</summary>
-        public const string MatchingExperiment = "matching-experiment";
     }
 
-    /// <summary>Which event types each queue receives.</summary>
+    /// <summary>Bindings: which event types (routing keys) each queue receives.</summary>
     public static readonly IReadOnlyDictionary<string, string[]> Bindings = new Dictionary<string, string[]>
     {
         [Queues.MatchingService] = [EventTypes.RideRequested, EventTypes.DriverRejectedRide],
-        [Queues.MatchingExperiment] = [EventTypes.ExperimentRideRequested],
-        [Queues.RideService] = [EventTypes.DriverAcceptedRide, EventTypes.RideMatchingFailed, EventTypes.RideOfferCreated],
+        [Queues.RideService] = [EventTypes.RideMatchingFailed],
         [Queues.DriverService] = [EventTypes.RideCompleted, EventTypes.RideCancelled],
         [Queues.RealtimeService] =
         [
-            EventTypes.RideOfferCreated, EventTypes.DriverRejectedRide, EventTypes.RideOfferWithdrawn, EventTypes.RideAssigned,
-            EventTypes.RideStarted, EventTypes.RideCompleted, EventTypes.RideCancelled, EventTypes.RideNoDriverAvailable,
+            EventTypes.RideOfferCreated, EventTypes.RideOfferWithdrawn, EventTypes.DriverRejectedRide,
+            EventTypes.RideAssigned, EventTypes.RideStarted, EventTypes.RideCompleted, EventTypes.RideCancelled,
+            EventTypes.RideNoDriverAvailable,
         ],
     };
 
@@ -47,11 +45,13 @@ public static class RabbitMqTopology
 
     public static async Task DeclareAsync(IChannel channel, CancellationToken ct = default)
     {
+        // durable = survives a broker restart
         await channel.ExchangeDeclareAsync(EventsExchange, ExchangeType.Topic, durable: true, autoDelete: false, cancellationToken: ct);
         await channel.ExchangeDeclareAsync(DeadLetterExchange, ExchangeType.Direct, durable: true, autoDelete: false, cancellationToken: ct);
 
         foreach (var (queue, routingKeys) in Bindings)
         {
+            // A rejected message (requeue: false) is moved by RabbitMQ to the dead-letter exchange → "<queue>.dlq".
             var arguments = new Dictionary<string, object?>
             {
                 ["x-dead-letter-exchange"] = DeadLetterExchange,

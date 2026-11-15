@@ -4,55 +4,44 @@ using RideHailing.Shared.Outbox;
 
 namespace DriverService.Data;
 
-/// <summary>DriverService's own database ("drivers"): drivers and ride offers.</summary>
+/// <summary>
+/// DriverService's own database ("drivers"). Each DbSet becomes a table.
+/// OnModelCreating describes how the C# classes map to tables; "dotnet ef migrations add" turns that into SQL.
+/// </summary>
 public class DriverDbContext(DbContextOptions<DriverDbContext> options) : DbContext(options)
 {
     public DbSet<Driver> Drivers => Set<Driver>();
     public DbSet<RideOffer> Offers => Set<RideOffer>();
-    public DbSet<ClosedRide> ClosedRides => Set<ClosedRide>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Driver>(e =>
         {
             e.HasKey(d => d.Id);
-            e.Property(d => d.Status).HasConversion<string>().HasMaxLength(20);
             e.Property(d => d.Name).HasMaxLength(80);
-            e.Property(d => d.Version).IsRowVersion();
-            e.HasData([.. DemoDrivers.All, .. ExperimentDrivers.All]);
+            e.Property(d => d.Status).HasConversion<string>().HasMaxLength(20); // stored as "Available", not 1
+            e.Property(d => d.Version).IsRowVersion();                         // Npgsql maps this to xmin
+            e.HasData(DemoDrivers.All);                                         // seed rows (inserted by the migration)
         });
 
         modelBuilder.Entity<RideOffer>(e =>
         {
             e.HasKey(o => o.Id);
             e.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
-            e.Property(o => o.RequestKey).HasMaxLength(200);
-            e.HasIndex(o => o.RequestKey).IsUnique(); // idempotent offer creation
-            e.HasIndex(o => new { o.DriverId, o.Status });
-            e.HasIndex(o => o.RideId);
             e.Property(o => o.Version).IsRowVersion();
+            e.Property(o => o.RequestKey).HasMaxLength(100);
+            e.HasIndex(o => o.RequestKey).IsUnique();      // idempotent CreateOffer
+            e.HasIndex(o => new { o.DriverId, o.Status }); // "pending offers of driver X"
+            e.HasIndex(o => o.RideId);
         });
 
-        modelBuilder.Entity<ClosedRide>(e => e.HasKey(c => c.RideId));
-
-        modelBuilder.AddOutboxAndInbox();
+        modelBuilder.AddOutboxAndInbox(); // OutboxMessages + ProcessedMessages tables
     }
 }
 
-/// <summary>Experiment pool (Experiment A): 20 always-available test drivers, hidden from the demo UI.</summary>
-public static class ExperimentDrivers
-{
-    private static readonly DateTimeOffset SeedTime = new(2026, 1, 1, 8, 0, 0, TimeSpan.Zero);
-
-    public static Driver[] All => Enumerable.Range(1, 20)
-        .Select(i => Driver.Seed(Guid.Parse($"11111111-1111-1111-1111-1000000000{i:D2}"), $"Experiment driver {i:D2}",
-            "Test vehicle", $"EXP-{i:D2}", 5.0, DriverStatus.Available, SeedTime.AddSeconds(i), experiment: true))
-        .ToArray();
-}
-
 /// <summary>
-/// Development seed data. Emma and Lucas start as Available (Emma first, she has waited longest),
-/// so a ride can be demonstrated immediately; the others start Offline.
+/// Demo drivers. Emma and Lucas start Available (Emma first: she has waited longest), the rest Offline.
+/// The ids are fixed because the frontend uses Emma's id as the default driver (state/identity.ts).
 /// </summary>
 public static class DemoDrivers
 {

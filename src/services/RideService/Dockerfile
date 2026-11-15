@@ -16,6 +16,7 @@ RUN dotnet publish src/services/RideService/RideService.csproj -c Release -o /ap
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
-EXPOSE 8080
+# 8080 = REST (HTTP/1.1), 8081 = gRPC (HTTP/2)
+EXPOSE 8080 8081
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "RideService.dll"]

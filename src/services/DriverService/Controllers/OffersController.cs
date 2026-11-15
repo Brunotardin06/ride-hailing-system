@@ -4,28 +4,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DriverService.Controllers;
 
+/// <summary>REST for the frontend: the driver answers an offer.</summary>
 [ApiController]
 [Route("api/offers")]
 public class OffersController(OfferService offers) : ControllerBase
 {
-    /// <summary>
-    /// Called by MatchingService. 201 = offer created, 200 = same RequestKey already handled (idempotent),
-    /// 409 = driver no longer available, 410 = ride was cancelled.
-    /// </summary>
-    [HttpPost]
-    public async Task<ActionResult<OfferDto>> Create(CreateOfferRequest request, CancellationToken ct)
-    {
-        var correlationId = Guid.TryParse(Request.Headers["X-Correlation-ID"], out var id) ? id : Guid.NewGuid();
-        var (offer, created) = await offers.CreateOfferAsync(request, correlationId, ct);
-        return created ? StatusCode(StatusCodes.Status201Created, OfferDto.From(offer)) : Ok(OfferDto.From(offer));
-    }
-
-    /// <summary>Called by the driver frontend.</summary>
+    // POST /api/offers/{id}/accept   body: { "driverId": "..." }
     [HttpPost("{offerId:guid}/accept")]
     public async Task<OfferDto> Accept(Guid offerId, OfferResponseRequest request, CancellationToken ct) =>
         OfferDto.From(await offers.AcceptAsync(offerId, request.DriverId, ct));
 
+    // POST /api/offers/{id}/reject   body: { "driverId": "..." }
     [HttpPost("{offerId:guid}/reject")]
     public async Task<OfferDto> Reject(Guid offerId, OfferResponseRequest request, CancellationToken ct) =>
         OfferDto.From(await offers.RejectAsync(offerId, request.DriverId, ct));
+
+    // Offer creation is NOT a REST endpoint in v2: MatchingService creates offers via gRPC (later phase).
 }

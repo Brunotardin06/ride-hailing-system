@@ -1,69 +1,58 @@
-// RideService — owns ride requests and the ride lifecycle.
-// REST in (frontend), RabbitMQ out/in (workflow) or REST out (synchronous matching, Experiment A),
-// Kafka out (ride event stream). See README.md.
+// RideService — Port 5001 (REST, HTTP/1.1) and 5011 (gRPC, HTTP/2). Owns rides (source of truth for ride status).
+// Two ports because without TLS one port cannot serve both HTTP/1.1 and HTTP/2 (see Kestrel in appsettings.json).
+//   1. builder.Services... → register services in the DI container
+//   2. app.Use/Map...      → the HTTP pipeline (order matters)
 
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using RideHailing.Shared.Hosting;
 using RideHailing.Shared.Messaging;
 using RideHailing.Shared.Outbox;
 using RideService.Data;
+using RideService.Grpc;
 using RideService.Messaging;
 using RideService.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ---------- 1. Services ----------
 builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())); // "Requested", not 0
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 builder.Services.AddFrontendCors(builder.Configuration);
 builder.Services.AddApiExceptionHandling();
 
-builder.Services.AddServiceIdentity(RideWorkflow.Source);
-builder.Services.AddDbContext<RideDbContext>(o => o.UseNpgsql(builder.Configuration.GetConnectionString("Postgres")));
+// The interceptor wakes the outbox dispatcher after every SaveChanges.
+builder.Services.AddDbContext<RideDbContext>((sp, o) => o
+    .UseNpgsql(builder.Configuration.GetConnectionString("Postgres"))
+    .AddInterceptors(sp.GetRequiredService<OutboxNotifyInterceptor>()));
 builder.Services.AddScoped<RideWorkflow>();
 
-// Synchronous matching path (Experiment A): REST client for MatchingService. Timeouts are enforced per call.
-builder.Services.Configure<MatchingClientOptions>(builder.Configuration.GetSection("Matching"));
-builder.Services.AddHttpClient(MatchingRestClient.MainClient, c =>
-{
-    c.BaseAddress = new Uri(builder.Configuration["ServiceUrls:MatchingService"]!);
-    c.Timeout = Timeout.InfiniteTimeSpan;
-});
-builder.Services.AddHttpClient(MatchingRestClient.ExperimentClient, c =>
-{
-    c.BaseAddress = new Uri(builder.Configuration["ServiceUrls:MatchingExperiment"]!);
-    c.Timeout = Timeout.InfiniteTimeSpan;
-});
-builder.Services.AddTransient<MatchingRestClient>();
-
-// Messaging: RabbitMQ (publisher + consumer), Kafka (outbox destination), metrics to AnalyticsService.
-builder.Services.AddRabbitMq(builder.Configuration);
-builder.Services.AddRabbitMqConsumer<RideMessageHandler>(RabbitMqTopology.Queues.RideService);
-builder.Services.Configure<KafkaOptions>(builder.Configuration.GetSection("Kafka"));
-builder.Services.AddSingleton<IOutboxTransport, KafkaRideEventProducer>();
+// RabbitMQ: publish via the outbox, consume queue "ride-service".
+builder.Services.AddRabbitMq(builder.Configuration, RideWorkflow.Source);
 builder.Services.AddOutbox<RideDbContext>();
-builder.Services.AddMetricsReporter(builder.Configuration);
+builder.Services.AddRabbitMqConsumer<RideMessageHandler>(RabbitMqTopology.Queues.RideService);
+
+// gRPC server (port 5011, HTTP/2): AssignDriver, called by DriverService when a driver accepts an offer.
+builder.Services.AddGrpc();
 
 var app = builder.Build();
 
 await app.Services.RetryOnStartupAsync("Apply database migrations",
     sp => sp.GetRequiredService<RideDbContext>().Database.MigrateAsync());
-await app.Services.RetryOnStartupAsync("Ensure Kafka topic",
-    sp => KafkaRideEventProducer.EnsureTopicAsync(sp.GetRequiredService<IOptions<KafkaOptions>>().Value));
 
+// ---------- 2. HTTP pipeline ----------
 if (app.Environment.IsDevelopment())
 {
-    // OpenAPI document: /openapi/v1.json
-    app.MapOpenApi();
+    app.MapOpenApi(); // /openapi/v1.json
 }
 
 app.UseExceptionHandler();
 app.UseCors();
 
-app.MapControllers();
+app.MapControllers();                    // REST  → port 5001
+app.MapGrpcService<RidesGrpcService>();  // gRPC  → port 5011
 app.MapHealthChecks("/health");
 
 app.Run();

@@ -1,13 +1,14 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using RealtimeService.Models;
-using RideHailing.Shared.Metrics;
 
 namespace RealtimeService.Services;
 
+// In-memory state (no database): lost on restart, which is acceptable for live connections and a demo chat.
+// Registered as singletons, shared by all hub calls and message handlers.
+
 /// <summary>
-/// Which connection is in which group. SignalR does not expose group membership, but we need it to know
-/// whether anybody is listening (a notification to an empty group cannot be acknowledged).
+/// Which connection is in which group. SignalR itself does not expose group membership,
+/// but we need it to check "did you join this chat?" and to log when nobody is listening.
 /// </summary>
 public sealed class ConnectionRegistry
 {
@@ -27,53 +28,9 @@ public sealed class ConnectionRegistry
         _groupsByConnection.TryGetValue(connectionId, out var groups) && groups.ContainsKey(group);
 
     public int CountInGroup(string group) => _groupsByConnection.Values.Count(g => g.ContainsKey(group));
-
-    public int ConnectionCount => _groupsByConnection.Count;
 }
 
-/// <summary>
-/// Measures SignalR delivery: the time from the server sending a message until the client's
-/// acknowledgement arrives back at the server (round trip, both timestamps on the server clock).
-/// Messages without an acknowledgement within the timeout are recorded as failed deliveries.
-/// </summary>
-public sealed class DeliveryTracker(IMetricsReporter metrics, ILogger<DeliveryTracker> logger) : BackgroundService
-{
-    private static readonly TimeSpan AckTimeout = TimeSpan.FromSeconds(15);
-
-    private sealed record Pending(string Operation, long StartTimestamp, Guid? CorrelationId);
-
-    private readonly ConcurrentDictionary<Guid, Pending> _pending = new();
-
-    /// <summary>Call immediately before sending.</summary>
-    public void Track(Guid messageId, string operation, Guid? correlationId) =>
-        _pending[messageId] = new Pending(operation, Stopwatch.GetTimestamp(), correlationId);
-
-    public bool Acknowledge(Guid messageId)
-    {
-        if (!_pending.TryRemove(messageId, out var pending)) return false; // unknown, late or second ack
-        metrics.Record(Mechanisms.SignalR, MetricKinds.AckRoundTrip, pending.Operation,
-            Stopwatch.GetElapsedTime(pending.StartTimestamp).TotalMilliseconds, success: true, pending.CorrelationId);
-        return true;
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
-        {
-            foreach (var (id, pending) in _pending)
-            {
-                var elapsed = Stopwatch.GetElapsedTime(pending.StartTimestamp);
-                if (elapsed < AckTimeout || !_pending.TryRemove(id, out _)) continue;
-                logger.LogWarning("No acknowledgement for {Operation} {MessageId}", pending.Operation, id);
-                metrics.Record(Mechanisms.SignalR, MetricKinds.AckRoundTrip, pending.Operation, elapsed.TotalMilliseconds,
-                    success: false, pending.CorrelationId, $"No acknowledgement within {AckTimeout.TotalSeconds:F0} s");
-            }
-        }
-    }
-}
-
-/// <summary>Recent chat messages per ride, in memory, so a reloaded page can show the conversation again.</summary>
+/// <summary>Recent chat messages per ride, so a reloaded page can show the conversation again.</summary>
 public sealed class ChatHistory
 {
     private const int MaxMessagesPerRide = 100;

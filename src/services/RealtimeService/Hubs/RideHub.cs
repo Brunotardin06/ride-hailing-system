@@ -1,27 +1,50 @@
 using Microsoft.AspNetCore.SignalR;
 using RealtimeService.Models;
 using RealtimeService.Services;
+using RideHailing.Shared.Kafka;
 
 namespace RealtimeService.Hubs;
 
-/// <summary>Methods the server can call on a connected browser.</summary>
+/// <summary>
+/// Methods the SERVER calls on the browser (strongly typed instead of magic strings).
+/// The JS client listens with connection.on('notification', ...) / on('chatMessage', ...).
+/// </summary>
 public interface IRideClient
 {
     Task Notification(NotificationDto notification);
     Task ChatMessage(ChatMessageDto message);
+    Task DriverLocation(DriverLocationDto location);
 }
 
 /// <summary>
-/// SignalR hub at /hubs/rides. The browser keeps one WebSocket connection open and:
-///   - Register(role, userId)      → joins its personal group to receive notifications
-///   - JoinRideChat(rideId)        → joins the chat group of a ride, returns the history
-///   - SendChatMessage(...)        → message is pushed to the other participant(s)
-///   - Acknowledge(messageId)      → confirms a notification/chat message was received (for delivery metrics)
-/// Business actions (request, accept, start...) are NOT done here; they go via REST to the owning service.
+/// SignalR hub at /hubs/rides: each browser tab keeps ONE WebSocket open. Methods the BROWSER calls:
+///   Register(role, userId)  → join the personal group "passenger:&lt;id&gt;" / "driver:&lt;id&gt;"
+///   JoinRideChat(rideId)    → join the chat group of a ride, get the history back
+///   SendChatMessage(...)    → pushed to the other participant
+///   Acknowledge(id)         → client confirms it received a message (kept for the frontend; no-op in v2)
+///   UpdateLocation(...)     → driver's simulated GPS → Kafka "driver-locations"
+///
+/// Business actions (request, accept, start, …) are NOT done here: they go via REST to the owning service.
+/// A hub instance lives for ONE call only, so state is kept in singletons (ConnectionRegistry, ChatHistory).
 /// </summary>
-public class RideHub(ConnectionRegistry registry, ChatHistory chatHistory, DeliveryTracker deliveryTracker, ILogger<RideHub> logger)
+public class RideHub(ConnectionRegistry registry, ChatHistory chatHistory, DriverLocationProducer locations, ILogger<RideHub> logger)
     : Hub<IRideClient>
 {
+    /// <summary>
+    /// The driver's tab (simulated GPS) sends its position every ~2 s. We only validate it and write it to Kafka;
+    /// the consumers (Realtime itself, Matching) decide what to do with it.
+    /// </summary>
+    public async Task UpdateLocation(Guid driverId, double lat, double lng)
+    {
+        // Only the driver's own connection may report their position.
+        if (!registry.IsInGroup(Context.ConnectionId, HubGroups.Driver(driverId)))
+            throw new HubException("Register as this driver first.");
+        if (lat is < -90 or > 90 || lng is < -180 or > 180)
+            throw new HubException("Invalid coordinates.");
+
+        await locations.ProduceAsync(new DriverLocation(driverId, lat, lng, DateTimeOffset.UtcNow), Context.ConnectionAborted);
+    }
+
     public async Task Register(string role, Guid userId)
     {
         var group = role switch
@@ -33,13 +56,6 @@ public class RideHub(ConnectionRegistry registry, ChatHistory chatHistory, Deliv
         await Groups.AddToGroupAsync(Context.ConnectionId, group);
         registry.Add(Context.ConnectionId, group);
         logger.LogInformation("Connection {ConnectionId} registered as {Group}", Context.ConnectionId, group);
-    }
-
-    public async Task Unregister(string role, Guid userId)
-    {
-        var group = role == "driver" ? HubGroups.Driver(userId) : HubGroups.Passenger(userId);
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
-        registry.Remove(Context.ConnectionId, group);
     }
 
     public async Task<IReadOnlyList<ChatMessageDto>> JoinRideChat(Guid rideId)
@@ -68,16 +84,14 @@ public class RideHub(ConnectionRegistry registry, ChatHistory chatHistory, Deliv
 
         var message = new ChatMessageDto(Guid.NewGuid(), request.RideId, request.SenderRole, request.SenderName.Trim(), text, DateTimeOffset.UtcNow);
         chatHistory.Add(message);
-
-        // Only measure delivery if someone else is listening (the sender is in the group too).
-        if (registry.CountInGroup(group) > 1) deliveryTracker.Track(message.Id, "chat-message", request.RideId);
-        await Clients.OthersInGroup(group).ChatMessage(message);
-        return message; // the sender gets its own message back as the return value
+        await Clients.OthersInGroup(group).ChatMessage(message); // everyone in the ride chat except the sender
+        return message;                                         // the sender gets it back as the return value
     }
 
-    /// <summary>Client confirms it received and displayed a notification or chat message.</summary>
-    public void Acknowledge(Guid messageId) => deliveryTracker.Acknowledge(messageId);
+    /// <summary>The frontend acknowledges every message (v1 used it to measure delivery). Kept so the call succeeds.</summary>
+    public void Acknowledge(Guid messageId) { }
 
+    // SignalR removes the connection from its groups automatically; we clean our own registry.
     public override Task OnDisconnectedAsync(Exception? exception)
     {
         registry.RemoveConnection(Context.ConnectionId);

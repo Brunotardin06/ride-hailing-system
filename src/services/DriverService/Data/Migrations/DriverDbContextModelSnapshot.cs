@@ -22,20 +22,6 @@ namespace DriverService.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("DriverService.Models.ClosedRide", b =>
-                {
-                    b.Property<Guid>("RideId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("ClosedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("RideId");
-
-                    b.ToTable("ClosedRides");
-                });
-
             modelBuilder.Entity("DriverService.Models.Driver", b =>
                 {
                     b.Property<Guid>("Id")
@@ -50,9 +36,6 @@ namespace DriverService.Data.Migrations
 
                     b.Property<Guid?>("CurrentRideId")
                         .HasColumnType("uuid");
-
-                    b.Property<bool>("IsExperimentDriver")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("LicensePlate")
                         .IsRequired()
@@ -91,7 +74,6 @@ namespace DriverService.Data.Migrations
                             Id = new Guid("11111111-1111-1111-1111-000000000001"),
                             AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CompletedRides = 0,
-                            IsExperimentDriver = false,
                             LicensePlate = "GX-123-B",
                             Name = "Emma de Vries",
                             Rating = 4.9000000000000004,
@@ -104,7 +86,6 @@ namespace DriverService.Data.Migrations
                             Id = new Guid("11111111-1111-1111-1111-000000000002"),
                             AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 1, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             CompletedRides = 0,
-                            IsExperimentDriver = false,
                             LicensePlate = "TS-482-K",
                             Name = "Lucas Janssen",
                             Rating = 4.7999999999999998,
@@ -116,7 +97,6 @@ namespace DriverService.Data.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-000000000003"),
                             CompletedRides = 0,
-                            IsExperimentDriver = false,
                             LicensePlate = "ZK-907-L",
                             Name = "Sophie Bakker",
                             Rating = 4.7000000000000002,
@@ -128,7 +108,6 @@ namespace DriverService.Data.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-000000000004"),
                             CompletedRides = 0,
-                            IsExperimentDriver = false,
                             LicensePlate = "HN-551-T",
                             Name = "Daan Visser",
                             Rating = 4.5999999999999996,
@@ -140,7 +119,6 @@ namespace DriverService.Data.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-000000000005"),
                             CompletedRides = 0,
-                            IsExperimentDriver = false,
                             LicensePlate = "PR-318-D",
                             Name = "Noor El Amrani",
                             Rating = 4.9000000000000004,
@@ -152,272 +130,11 @@ namespace DriverService.Data.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-000000000006"),
                             CompletedRides = 0,
-                            IsExperimentDriver = false,
                             LicensePlate = "VB-640-S",
                             Name = "Milan Peeters",
                             Rating = 5.0,
                             Status = "Offline",
                             Vehicle = "Mercedes E-Class · black",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000001"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 1, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-01",
-                            Name = "Experiment driver 01",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000002"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 2, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-02",
-                            Name = "Experiment driver 02",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000003"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 3, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-03",
-                            Name = "Experiment driver 03",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000004"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 4, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-04",
-                            Name = "Experiment driver 04",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000005"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 5, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-05",
-                            Name = "Experiment driver 05",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000006"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 6, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-06",
-                            Name = "Experiment driver 06",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000007"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 7, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-07",
-                            Name = "Experiment driver 07",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000008"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 8, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-08",
-                            Name = "Experiment driver 08",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000009"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 9, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-09",
-                            Name = "Experiment driver 09",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000010"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 10, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-10",
-                            Name = "Experiment driver 10",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000011"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 11, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-11",
-                            Name = "Experiment driver 11",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000012"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 12, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-12",
-                            Name = "Experiment driver 12",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000013"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 13, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-13",
-                            Name = "Experiment driver 13",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000014"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 14, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-14",
-                            Name = "Experiment driver 14",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000015"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 15, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-15",
-                            Name = "Experiment driver 15",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000016"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 16, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-16",
-                            Name = "Experiment driver 16",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000017"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 17, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-17",
-                            Name = "Experiment driver 17",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000018"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 18, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-18",
-                            Name = "Experiment driver 18",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000019"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 19, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-19",
-                            Name = "Experiment driver 19",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
-                            Version = 0u
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-100000000020"),
-                            AvailableSince = new DateTimeOffset(new DateTime(2026, 1, 1, 8, 0, 20, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CompletedRides = 0,
-                            IsExperimentDriver = true,
-                            LicensePlate = "EXP-20",
-                            Name = "Experiment driver 20",
-                            Rating = 5.0,
-                            Status = "Available",
-                            Vehicle = "Test vehicle",
                             Version = 0u
                         });
                 });
@@ -441,14 +158,17 @@ namespace DriverService.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<double?>("DestinationLat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("DestinationLng")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid>("DriverId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsExperiment")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("PassengerId")
                         .HasColumnType("uuid");
@@ -461,10 +181,16 @@ namespace DriverService.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<double?>("PickupLat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("PickupLng")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("RequestKey")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTimeOffset?>("RespondedAt")
                         .HasColumnType("timestamp with time zone");
@@ -508,11 +234,6 @@ namespace DriverService.Data.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Destination")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTimeOffset?>("DispatchedAt")
                         .HasColumnType("timestamp with time zone");

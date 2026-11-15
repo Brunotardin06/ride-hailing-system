@@ -3,32 +3,39 @@ using RideHailing.Shared.Messaging;
 
 namespace MatchingService.Messaging;
 
-/// <summary>Handles messages from the "matching-service" RabbitMQ queue.</summary>
-public sealed class MatchingMessageHandler(MatchingWorkflow workflow, ProcessedMessageCache processed, ILogger<MatchingMessageHandler> logger)
+/// <summary>
+/// Handles messages from queue "matching-service" (bindings in RabbitMqTopology).
+/// No database here, so duplicates are detected with the in-memory ProcessedMessageCache.
+/// </summary>
+public class MatchingMessageHandler(MatchingWorkflow matching, ProcessedMessageCache processed, ILogger<MatchingMessageHandler> logger)
     : IMessageHandler
 {
     public async Task HandleAsync(MessageEnvelope message, CancellationToken ct)
     {
-        // MatchingService has no database, so duplicates are detected in memory.
-        // (Offer creation is idempotent as well, see MatchingWorkflow.)
         if (!processed.TryMarkProcessed(message.EventId))
         {
-            logger.LogInformation("Skipping duplicate {EventType} {EventId}", message.EventType, message.EventId);
+            logger.LogInformation("Duplicate {EventType} {EventId}; skipping", message.EventType, message.EventId);
             return;
         }
 
         try
         {
-            await (message.EventType switch
+            switch (message.EventType)
             {
-                EventTypes.RideRequested or EventTypes.ExperimentRideRequested => workflow.HandleRideRequestedAsync(message, ct),
-                EventTypes.DriverRejectedRide => workflow.HandleDriverRejectedAsync(message, ct),
-                _ => Task.CompletedTask,
-            });
+                case EventTypes.RideRequested:
+                    await matching.HandleRideRequestedAsync(message, ct);
+                    break;
+                case EventTypes.DriverRejectedRide:
+                    await matching.HandleDriverRejectedAsync(message, ct);
+                    break;
+                default:
+                    logger.LogWarning("Unexpected event type {EventType}; ignoring", message.EventType);
+                    break;
+            }
         }
         catch
         {
-            processed.Remove(message.EventId); // allow the retry to process it
+            processed.Remove(message.EventId); // failed → forget it, so the retry is not skipped as a "duplicate"
             throw;
         }
     }

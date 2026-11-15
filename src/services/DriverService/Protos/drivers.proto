@@ -1,0 +1,60 @@
+// gRPC contract of DriverService. DriverService implements the server;
+// MatchingService compiles the client from THIS same file (single source of truth, see MatchingService.csproj).
+//
+// Why gRPC here (see docs/communication-decisions.md): Matching needs an answer NOW to continue
+// ("who is available?", "was the offer created?"), and a typed contract catches mismatches at compile time.
+// Note: v1 measured no speed gain vs REST, so the reason is the contract, not performance.
+syntax = "proto3";
+
+option csharp_namespace = "RideHailing.Grpc.Drivers";
+
+package drivers;
+
+service Drivers {
+  // Available drivers, longest-waiting first, excluding drivers already tried for this ride.
+  rpc GetAvailableDrivers (GetAvailableDriversRequest) returns (GetAvailableDriversReply);
+
+  // Reserve the driver (Available → Offered) and create a Pending offer.
+  // Errors: FAILED_PRECONDITION = driver no longer available (try the next one), NOT_FOUND = unknown driver.
+  // Idempotent: the same request_key returns the existing offer instead of creating a second one.
+  rpc CreateOffer (CreateOfferRequest) returns (CreateOfferReply);
+}
+
+message GetAvailableDriversRequest {
+  repeated string exclude_driver_ids = 1;
+  int32 max_results = 2;
+}
+
+message AvailableDriver {
+  string id = 1;
+  string name = 2;
+  string vehicle = 3;
+  string license_plate = 4;
+  double rating = 5;
+}
+
+message GetAvailableDriversReply {
+  repeated AvailableDriver drivers = 1;
+}
+
+message CreateOfferRequest {
+  string request_key = 1;     // "<rideId>:<attempt>"
+  string ride_id = 2;
+  string correlation_id = 3;
+  string driver_id = 4;
+  string passenger_id = 5;
+  string passenger_name = 6;
+  string pickup = 7;
+  string destination = 8;
+  int32 attempt = 9;
+  // Coordinates of the trip (optional: "has_pickup_lat" tells whether they were sent).
+  optional double pickup_lat = 10;
+  optional double pickup_lng = 11;
+  optional double destination_lat = 12;
+  optional double destination_lng = 13;
+}
+
+message CreateOfferReply {
+  string offer_id = 1;
+  int64 expires_at_unix_ms = 2;
+}

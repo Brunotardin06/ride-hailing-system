@@ -36,11 +36,6 @@ namespace RideService.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Destination")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<DateTimeOffset?>("DispatchedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -108,27 +103,19 @@ namespace RideService.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<double?>("DestinationLat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("DestinationLng")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid?>("DriverId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("DriverName")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("ExperimentRunId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("LicensePlate")
-                        .HasColumnType("text");
-
-                    b.Property<string>("MatchingMode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTimeOffset?>("OfferCreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("OfferedDriverName")
                         .HasColumnType("text");
 
                     b.Property<Guid>("PassengerId")
@@ -143,6 +130,12 @@ namespace RideService.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<double?>("PickupLat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("PickupLng")
+                        .HasColumnType("double precision");
 
                     b.Property<DateTimeOffset>("RequestedAt")
                         .HasColumnType("timestamp with time zone");
@@ -169,14 +162,9 @@ namespace RideService.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DriverId");
+                    b.HasIndex("DriverId", "Status");
 
-                    b.HasIndex("ExperimentRunId");
-
-                    b.HasIndex("PassengerId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Rides_OneActiveRidePerPassenger")
-                        .HasFilter("\"Status\" IN ('Requested', 'Assigned', 'InProgress')");
+                    b.HasIndex("PassengerId", "RequestedAt");
 
                     b.ToTable("Rides");
                 });

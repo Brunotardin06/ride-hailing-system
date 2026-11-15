@@ -3,20 +3,21 @@ using RideService.Services;
 
 namespace RideService.Messaging;
 
-/// <summary>Handles messages from the "ride-service" RabbitMQ queue.</summary>
-public class RideMessageHandler(RideWorkflow workflow, ILogger<RideMessageHandler> logger) : IMessageHandler
+/// <summary>
+/// Handles messages from queue "ride-service" (bindings in RabbitMqTopology).
+/// Like a controller, but for messages: it only routes to RideWorkflow.
+/// </summary>
+public class RideMessageHandler(RideWorkflow rides, ILogger<RideMessageHandler> logger) : IMessageHandler
 {
-    public Task HandleAsync(MessageEnvelope message, CancellationToken ct) => message.EventType switch
+    public Task HandleAsync(MessageEnvelope message, CancellationToken ct)
     {
-        EventTypes.DriverAcceptedRide => workflow.HandleDriverAcceptedAsync(message, ct),
-        EventTypes.RideMatchingFailed => workflow.HandleMatchingFailedAsync(message, ct),
-        EventTypes.RideOfferCreated => workflow.HandleOfferCreatedAsync(message, ct),
-        _ => Ignore(message),
-    };
-
-    private Task Ignore(MessageEnvelope message)
-    {
-        logger.LogWarning("Ignoring unexpected event type {EventType}", message.EventType);
-        return Task.CompletedTask;
+        switch (message.EventType)
+        {
+            case EventTypes.RideMatchingFailed:
+                return rides.HandleMatchingFailedAsync(message, ct);
+            default:
+                logger.LogWarning("Unexpected event type {EventType}; ignoring", message.EventType);
+                return Task.CompletedTask;
+        }
     }
 }

@@ -1,0 +1,52 @@
+{
+  "run": {
+    "id": "1928201c-5147-4d57-9e90-403f23ec3883",
+    "name": "RabbitMQ recovery · 15s outage · 5 rides",
+    "mechanism": "RabbitMQ",
+    "kind": "recovery",
+    "operation": "ride request → offer (matching-service down)",
+    "scenario": "MatchingService stopped for 15s while 5 rides were requested",
+    "tool": "experiments/rabbitmq-recovery.mjs",
+    "startedAt": "2026-11-01T20:02:46.063+00:00",
+    "finishedAt": "2026-11-01T20:03:03.26+00:00",
+    "count": 5,
+    "errors": 0,
+    "errorRate": 0,
+    "avgMs": 17062.6,
+    "p50Ms": 17061,
+    "p95Ms": 17081,
+    "p99Ms": 17081,
+    "maxMs": 17081,
+    "throughputPerSecond": 0.29,
+    "parameters": {
+      "rides": "5",
+      "outageSeconds": "15",
+      "queuedDuringOutage": "5",
+      "drainAfterRestartMs": "698",
+      "lostMessages": "0"
+    },
+    "notes": "start = POST /api/rides returned; end = offer visible via DriverService (100 ms polling). Includes the outage itself."
+  },
+  "samples": [
+    {
+      "durationMs": 17081,
+      "success": true
+    },
+    {
+      "durationMs": 17070,
+      "success": true
+    },
+    {
+      "durationMs": 17061,
+      "success": true
+    },
+    {
+      "durationMs": 17054,
+      "success": true
+    },
+    {
+      "durationMs": 17047,
+      "success": true
+    }
+  ]
+}

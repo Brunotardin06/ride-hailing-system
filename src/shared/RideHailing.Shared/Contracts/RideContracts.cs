@@ -1,12 +1,10 @@
 namespace RideHailing.Shared.Contracts;
 
-// Payloads of the messages exchanged between services (the "contract").
-// Each payload carries enough data for its consumers so they do not need to call back.
+// Payloads of the RabbitMQ events (the "contract" between publisher and consumers).
+// Rule: each payload carries ALL the data its consumers need, so they never have to call back the publisher.
+// Changing a field here changes the contract for every consumer, so add fields, don't rename/remove them.
 
-/// <summary>
-/// Published by RideService when a passenger requests a ride (RabbitMQ matching path).
-/// ExperimentRunId / SimulatedMatchingDelayMs are only set for Experiment A rides.
-/// </summary>
+/// <summary>ride.requested — RideService → MatchingService.</summary>
 public sealed record RideRequestedPayload(
     Guid RideId,
     Guid PassengerId,
@@ -14,35 +12,13 @@ public sealed record RideRequestedPayload(
     string Pickup,
     string Destination,
     DateTimeOffset RequestedAt,
-    Guid? ExperimentRunId = null,
-    int SimulatedMatchingDelayMs = 0);
+    // Coordinates chosen on the map (added in v2; optional so older messages still deserialize).
+    double? PickupLat = null,
+    double? PickupLng = null,
+    double? DestinationLat = null,
+    double? DestinationLng = null);
 
-/// <summary>
-/// Synchronous matching request: RideService → MatchingService (REST matching path, Experiment A).
-/// Carries the same data as <see cref="RideRequestedPayload"/>.
-/// </summary>
-public sealed record MatchingRequest(
-    Guid RideId,
-    Guid CorrelationId,
-    Guid PassengerId,
-    string PassengerName,
-    string Pickup,
-    string Destination,
-    Guid? ExperimentRunId = null,
-    int SimulatedMatchingDelayMs = 0);
-
-public enum MatchingOutcome { OfferCreated, NoDriverAvailable, RideClosed }
-
-/// <summary>Result of a synchronous matching request.</summary>
-public sealed record MatchingResponse(
-    MatchingOutcome Outcome,
-    Guid? OfferId,
-    Guid? DriverId,
-    string? DriverName,
-    DateTimeOffset? OfferCreatedAt,
-    string? Reason);
-
-/// <summary>Published by DriverService after MatchingService created an offer for a driver.</summary>
+/// <summary>ride.offer-created — DriverService → RealtimeService (show the offer on the driver's screen).</summary>
 public sealed record RideOfferCreatedPayload(
     Guid OfferId,
     Guid RideId,
@@ -55,19 +31,10 @@ public sealed record RideOfferCreatedPayload(
     int Attempt,
     DateTimeOffset ExpiresAt);
 
-/// <summary>Published by DriverService when a driver accepted an offer.</summary>
-public sealed record DriverAcceptedRidePayload(
-    Guid OfferId,
-    Guid RideId,
-    Guid DriverId,
-    string DriverName,
-    string Vehicle,
-    string LicensePlate,
-    Guid PassengerId);
-
 /// <summary>
-/// Published by DriverService when a driver rejected an offer or let it expire.
-/// Contains the ride details and the drivers already tried, so MatchingService can re-match statelessly.
+/// driver.rejected-ride — DriverService → MatchingService (+ RealtimeService). Sent when a driver rejected an
+/// offer or let it expire. Carries the ride data and the drivers already tried, so MatchingService can try the
+/// next driver without keeping state and without calling anyone back.
 /// </summary>
 public sealed record DriverRejectedRidePayload(
     Guid OfferId,
@@ -80,21 +47,21 @@ public sealed record DriverRejectedRidePayload(
     string Destination,
     int Attempt,
     string Reason,
-    IReadOnlyList<Guid> ExcludedDriverIds);
+    IReadOnlyList<Guid> ExcludedDriverIds,
+    double? PickupLat = null,
+    double? PickupLng = null,
+    double? DestinationLat = null,
+    double? DestinationLng = null);
 
-/// <summary>Published by DriverService when a pending offer is withdrawn because the ride was cancelled.</summary>
+/// <summary>ride.offer-withdrawn — DriverService → RealtimeService (the ride was cancelled while the offer was pending).</summary>
 public sealed record RideOfferWithdrawnPayload(Guid OfferId, Guid RideId, Guid DriverId, string Reason);
 
-/// <summary>Published by MatchingService when no driver could be found.</summary>
-public sealed record RideMatchingFailedPayload(
-    Guid RideId,
-    Guid PassengerId,
-    string Reason,
-    int Attempts);
+/// <summary>ride.matching-failed — MatchingService → RideService (no available driver accepted).</summary>
+public sealed record RideMatchingFailedPayload(Guid RideId, string Reason, int Attempts);
 
 /// <summary>
-/// Published by RideService on every status change after the request
-/// (assigned, started, completed, cancelled, no driver available).
+/// ride.assigned / started / completed / cancelled / no-driver-available — RideService → DriverService, RealtimeService.
+/// One payload for every status change.
 /// </summary>
 public sealed record RideStatusChangedPayload(
     Guid RideId,
@@ -102,6 +69,5 @@ public sealed record RideStatusChangedPayload(
     Guid? DriverId,
     string? DriverName,
     string Status,
-    string? PreviousStatus,
     string? Reason,
     DateTimeOffset ChangedAt);

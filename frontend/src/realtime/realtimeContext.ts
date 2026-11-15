@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { ChatMessage, Notification } from '../api/types'
+import type { ChatMessage, DriverLocation, Notification } from '../api/types'
 
 export type Role = 'passenger' | 'driver'
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
@@ -15,6 +15,10 @@ export interface RealtimeContextValue {
   joinRideChat: (rideId: string) => Promise<ChatMessage[]>
   leaveRideChat: (rideId: string) => Promise<void>
   sendChat: (rideId: string, text: string) => Promise<ChatMessage>
+  /** Passenger: positions of the driver of the current ride. */
+  onDriverLocation: (listener: (l: DriverLocation) => void) => () => void
+  /** Driver: report the (simulated) GPS position. Silently skipped while disconnected. */
+  sendLocation: (lat: number, lng: number) => void
 }
 
 export const RealtimeContext = createContext<RealtimeContextValue | null>(null)

@@ -11,6 +11,7 @@ import StatCard from '../../components/ui/StatCard'
 import { useRealtime } from '../../realtime/realtimeContext'
 import { useDriver } from '../../state/areaContexts'
 import { errorMessage, useToast } from '../../state/toastContext'
+import DriverLocationCard from './DriverLocationCard'
 
 const statusTone: Record<DriverStatus, 'neutral' | 'success' | 'warning' | 'info'> = {
   Offline: 'neutral', Available: 'success', Offered: 'warning', Busy: 'info',
@@ -100,6 +101,8 @@ export default function DriverDashboardPage() {
           <LiveFeed notifications={notifications.slice(0, 6)} empty="Notifications will appear here." />
         </Card>
       </div>
+
+      <DriverLocationCard driver={driver} activeRide={activeRide} />
 
       <Card title="All demo drivers" aside={<button className="button button--small" onClick={resetDemo}>Reset demo</button>}>
         <div className="table-wrap">

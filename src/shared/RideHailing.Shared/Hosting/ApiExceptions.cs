@@ -5,25 +5,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace RideHailing.Shared.Hosting;
 
+// Business rules throw these exceptions. ApiExceptionHandler turns them into HTTP responses,
+// so controllers never need try/catch or "if (x == null) return NotFound()".
+
 /// <summary>The requested resource does not exist → HTTP 404.</summary>
 public sealed class NotFoundException(string message) : Exception(message);
 
-/// <summary>The request is valid but conflicts with the current state (e.g. invalid status transition) → HTTP 409.</summary>
+/// <summary>Valid request, but it conflicts with the current state (e.g. invalid status change) → HTTP 409.</summary>
 public sealed class ConflictException(string message) : Exception(message);
 
-/// <summary>The resource existed but is no longer available (e.g. offer for a cancelled ride) → HTTP 410.</summary>
-public sealed class GoneException(string message) : Exception(message);
-
-/// <summary>The caller is not allowed to perform this action on the resource → HTTP 403.</summary>
+/// <summary>The caller may not do this (e.g. accepting another driver's offer) → HTTP 403.</summary>
 public sealed class ForbiddenException(string message) : Exception(message);
 
-/// <summary>A service needed to complete the request is not available → HTTP 503.</summary>
-public sealed class ServiceUnavailableException(string message, IDictionary<string, object?>? extensions = null) : Exception(message)
-{
-    public IDictionary<string, object?> Extensions { get; } = extensions ?? new Dictionary<string, object?>();
-}
+/// <summary>A service we depend on synchronously (gRPC) is down or too slow → HTTP 503. The user may retry.</summary>
+public sealed class ServiceUnavailableException(string message) : Exception(message);
 
-/// <summary>Turns the exceptions above into RFC 7807 problem responses, so controllers stay simple.</summary>
+/// <summary>
+/// Global exception handler (registered with AddApiExceptionHandling + app.UseExceptionHandler()).
+/// Writes an RFC 7807 "ProblemDetails" JSON body: { status, title, detail }.
+/// The frontend (api/http.ts) shows "detail" as the error message.
+/// </summary>
 public sealed class ApiExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
@@ -32,24 +33,20 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetails) :
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
-            GoneException => (StatusCodes.Status410Gone, "Gone"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Forbidden"),
             ServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Service unavailable"),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Concurrent update, please retry"),
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request"),
             _ => (0, ""),
         };
-        if (status == 0) return false; // unexpected error: default 500 handling
+        if (status == 0) return false; // unexpected error → default 500 handling
 
         context.Response.StatusCode = status;
-        var details = new ProblemDetails { Status = status, Title = title, Detail = exception.Message };
-        if (exception is ServiceUnavailableException unavailable)
-            foreach (var (key, value) in unavailable.Extensions) details.Extensions[key] = value;
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = context,
             Exception = exception,
-            ProblemDetails = details,
+            ProblemDetails = new ProblemDetails { Status = status, Title = title, Detail = exception.Message },
         });
     }
 }

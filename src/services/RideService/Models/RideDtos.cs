@@ -2,23 +2,26 @@ using System.ComponentModel.DataAnnotations;
 
 namespace RideService.Models;
 
-/// <summary>
-/// Request a ride. The last four fields are optional and only meant for Experiment A:
-/// MatchingMode overrides the configured path; experiment rides use the isolated experiment resources.
-/// </summary>
-public sealed record CreateRideRequest(
+// JSON shapes of the REST API. Field names match frontend/src/api/types.ts (Ride).
+// [Required] / [StringLength]: [ApiController] validates these automatically and returns 400 if they fail.
+
+/// <summary>Body of POST /api/rides.</summary>
+public sealed record RequestRideRequest(
     [Required] Guid PassengerId,
     [Required, StringLength(80, MinimumLength = 1)] string PassengerName,
     [Required, StringLength(200, MinimumLength = 2)] string Pickup,
     [Required, StringLength(200, MinimumLength = 2)] string Destination,
-    MatchingMode? MatchingMode = null,
-    Guid? ExperimentRunId = null,
-    [Range(0, 60000)] int SimulatedMatchingDelayMs = 0,
-    [Range(100, 60000)] int? MatchingTimeoutMs = null);
+    // Optional: point picked on the map. Without it, a known place name is resolved to coordinates.
+    [Range(-90, 90)] double? PickupLat = null,
+    [Range(-180, 180)] double? PickupLng = null,
+    [Range(-90, 90)] double? DestinationLat = null,
+    [Range(-180, 180)] double? DestinationLng = null);
 
+/// <summary>Body of POST /api/rides/{id}/start and /complete: which driver is acting.</summary>
 public sealed record DriverActionRequest([Required] Guid DriverId);
 
-public sealed record CancelRideRequest(Guid? PassengerId, string? Reason);
+/// <summary>Body of POST /api/rides/{id}/cancel.</summary>
+public sealed record CancelRideRequest([Required] Guid PassengerId, string? Reason);
 
 public sealed record RideDto(
     Guid Id,
@@ -27,6 +30,10 @@ public sealed record RideDto(
     string PassengerName,
     string Pickup,
     string Destination,
+    double? PickupLat,
+    double? PickupLng,
+    double? DestinationLat,
+    double? DestinationLng,
     RideStatus Status,
     Guid? DriverId,
     string? DriverName,
@@ -37,13 +44,9 @@ public sealed record RideDto(
     DateTimeOffset? StartedAt,
     DateTimeOffset? CompletedAt,
     DateTimeOffset? CancelledAt,
-    string? StatusReason,
-    MatchingMode MatchingMode,
-    Guid? ExperimentRunId,
-    DateTimeOffset? OfferCreatedAt,
-    string? OfferedDriverName)
+    string? StatusReason)
 {
     public static RideDto From(Ride r) => new(r.Id, r.CorrelationId, r.PassengerId, r.PassengerName, r.Pickup, r.Destination,
-        r.Status, r.DriverId, r.DriverName, r.Vehicle, r.LicensePlate, r.RequestedAt, r.AssignedAt, r.StartedAt,
-        r.CompletedAt, r.CancelledAt, r.StatusReason, r.MatchingMode, r.ExperimentRunId, r.OfferCreatedAt, r.OfferedDriverName);
+        r.PickupLat, r.PickupLng, r.DestinationLat, r.DestinationLng, r.Status, r.DriverId, r.DriverName, r.Vehicle, r.LicensePlate, r.RequestedAt, r.AssignedAt, r.StartedAt,
+        r.CompletedAt, r.CancelledAt, r.StatusReason);
 }

@@ -1,37 +1,43 @@
-using System.Net;
-using System.Net.Http.Json;
-using RideHailing.Shared.Messaging;
+using Grpc.Core;
+using RideHailing.Grpc.Drivers;
+using RideHailing.Shared.Contracts;
 
 namespace MatchingService.Services;
 
-public sealed record CreateOfferRequest(
-    string RequestKey, Guid RideId, Guid DriverId, Guid PassengerId, string PassengerName, string Pickup, string Destination, int Attempt);
-
-public enum OfferResult { Created, AlreadyExists, DriverUnavailable, RideClosed }
-
-/// <summary>Part of DriverService's OfferDto that MatchingService needs.</summary>
-public sealed record CreatedOffer(Guid Id, Guid DriverId, DateTimeOffset CreatedAt);
-
-/// <summary>REST client for POST {DriverService}/api/offers.</summary>
-public sealed class OfferClient(HttpClient http)
+/// <summary>"Offer this ride to that driver" — gRPC CreateOffer on DriverService.</summary>
+public class OfferClient(Drivers.DriversClient client)
 {
-    public async Task<(OfferResult Result, CreatedOffer? Offer)> CreateOfferAsync(CreateOfferRequest request, Guid correlationId, CancellationToken ct)
+    /// <returns>true = offer created; false = driver was taken meanwhile (try the next candidate).</returns>
+    public async Task<bool> TryCreateOfferAsync(RideRequestedPayload ride, DriverCandidate driver, int attempt, Guid correlationId, CancellationToken ct)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, "/api/offers")
+        try
         {
-            Content = JsonContent.Create(request, options: Json.Options),
-        };
-        message.Headers.Add("X-Correlation-ID", correlationId.ToString());
+            var request = new CreateOfferRequest
+            {
+                // Same key on a retry of the same message → DriverService returns the existing offer.
+                RequestKey = $"{ride.RideId}:{attempt}",
+                RideId = ride.RideId.ToString(),
+                CorrelationId = correlationId.ToString(),
+                DriverId = driver.Id.ToString(),
+                PassengerId = ride.PassengerId.ToString(),
+                PassengerName = ride.PassengerName,
+                Pickup = ride.Pickup,
+                Destination = ride.Destination,
+                Attempt = attempt,
+            };
+            // Optional proto fields: only set when known (unset ≠ 0.0).
+            if (ride.PickupLat is { } pLat) request.PickupLat = pLat;
+            if (ride.PickupLng is { } pLng) request.PickupLng = pLng;
+            if (ride.DestinationLat is { } dLat) request.DestinationLat = dLat;
+            if (ride.DestinationLng is { } dLng) request.DestinationLng = dLng;
 
-        using var response = await http.SendAsync(message, ct);
-        return response.StatusCode switch
+            await client.CreateOfferAsync(request, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: ct);
+            return true;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.FailedPrecondition)
         {
-            HttpStatusCode.Created => (OfferResult.Created, await response.Content.ReadFromJsonAsync<CreatedOffer>(Json.Options, ct)),
-            HttpStatusCode.OK => (OfferResult.AlreadyExists, await response.Content.ReadFromJsonAsync<CreatedOffer>(Json.Options, ct)),
-            HttpStatusCode.Conflict => (OfferResult.DriverUnavailable, null),
-            HttpStatusCode.Gone => (OfferResult.RideClosed, null),
-            // Anything else is unexpected: throw so the RabbitMQ consumer retries the message.
-            _ => throw new HttpRequestException($"Creating offer failed: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync(ct)}"),
-        };
+            return false; // race: between the lookup and now, the driver got another offer or went offline
+        }
+        // Other errors (Unavailable, DeadlineExceeded) bubble up → the RabbitMQ consumer retries the message.
     }
 }

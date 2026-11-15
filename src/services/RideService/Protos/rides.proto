@@ -1,0 +1,28 @@
+// gRPC contract of RideService. RideService implements the server;
+// DriverService compiles the client from THIS same file (see DriverService.csproj).
+//
+// Why synchronous here: when a driver accepts, the driver must know immediately whether the ride is still
+// theirs (it may have been cancelled a second ago). An async event could only tell them later.
+syntax = "proto3";
+
+option csharp_namespace = "RideHailing.Grpc.Rides";
+
+package rides;
+
+service Rides {
+  // Requested → Assigned. Errors: FAILED_PRECONDITION = ride is no longer waiting (cancelled / already assigned),
+  // NOT_FOUND = unknown ride.
+  rpc AssignDriver (AssignDriverRequest) returns (AssignDriverReply);
+}
+
+message AssignDriverRequest {
+  string ride_id = 1;
+  string driver_id = 2;
+  string driver_name = 3;
+  string vehicle = 4;
+  string license_plate = 5;
+}
+
+message AssignDriverReply {
+  string status = 1;
+}

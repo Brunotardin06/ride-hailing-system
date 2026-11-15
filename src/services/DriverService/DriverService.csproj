@@ -21,8 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- gRPC server code is generated from this contract at build time. -->
-    <Protobuf Include="Protos/driver_availability.proto" GrpcServices="Server" />
+    <!-- gRPC code is generated from the .proto files at build time.
+         Server: we implement it (drivers.proto). Client: we call it (rides.proto, owned by RideService). -->
+    <Protobuf Include="Protos/drivers.proto" GrpcServices="Server" />
+    <Protobuf Include="../RideService/Protos/rides.proto" GrpcServices="Client" Link="Protos/rides.proto" />
   </ItemGroup>
 
 </Project>

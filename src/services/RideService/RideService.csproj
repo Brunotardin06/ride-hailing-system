@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Confluent.Kafka" Version="2.16.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -18,6 +18,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\shared\RideHailing.Shared\RideHailing.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- gRPC server generated from the contract this service owns. DriverService compiles the client from the same file. -->
+    <Protobuf Include="Protos/rides.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

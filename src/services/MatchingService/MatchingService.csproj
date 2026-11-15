@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <!-- gRPC client generated from the contract owned by DriverService (single source of truth). -->
-    <Protobuf Include="../DriverService/Protos/driver_availability.proto" GrpcServices="Client" Link="Protos/driver_availability.proto" />
+    <Protobuf Include="../DriverService/Protos/drivers.proto" GrpcServices="Client" Link="Protos/drivers.proto" />
   </ItemGroup>
 
 </Project>

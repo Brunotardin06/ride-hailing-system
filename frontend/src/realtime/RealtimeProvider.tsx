@@ -1,6 +1,6 @@
 import { HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from '@microsoft/signalr'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { ChatMessage, Notification } from '../api/types'
+import type { ChatMessage, DriverLocation, Notification } from '../api/types'
 import { serviceUrls } from '../config'
 import { RealtimeContext, type ConnectionStatus, type RealtimeContextValue, type Role } from './realtimeContext'
 
@@ -12,6 +12,7 @@ type Listener<T> = (value: T) => void
  * - Acknowledges every notification and chat message it receives; RealtimeService uses the
  *   acknowledgement to measure the delivery round trip.
  * - Re-registers and re-joins chats after an automatic reconnect (a new connection has no groups).
+ * - Driver: sends its simulated GPS position (UpdateLocation). Passenger: receives the driver's position.
  */
 export function RealtimeProvider({ role, userId, userName, children }: {
   role: Role
@@ -24,6 +25,7 @@ export function RealtimeProvider({ role, userId, userName, children }: {
   const connectionRef = useRef<HubConnection | null>(null)
   const notificationListeners = useRef(new Set<Listener<Notification>>())
   const chatListeners = useRef(new Set<Listener<ChatMessage>>())
+  const locationListeners = useRef(new Set<Listener<DriverLocation>>())
   const joinedChats = useRef(new Set<string>())
 
   useEffect(() => {
@@ -48,6 +50,10 @@ export function RealtimeProvider({ role, userId, userName, children }: {
     connection.on('chatMessage', (message: ChatMessage) => {
       acknowledge(message.id)
       chatListeners.current.forEach((listener) => listener(message))
+    })
+    // Not acknowledged: a new position arrives every ~2 s anyway.
+    connection.on('driverLocation', (location: DriverLocation) => {
+      locationListeners.current.forEach((listener) => listener(location))
     })
 
     const register = async () => {
@@ -119,9 +125,20 @@ export function RealtimeProvider({ role, userId, userName, children }: {
     ensureConnected().invoke<ChatMessage>('SendChatMessage', { rideId, senderRole: role, senderName: userName, text }),
   [role, userName])
 
+  const onDriverLocation = useCallback((listener: Listener<DriverLocation>) => {
+    locationListeners.current.add(listener)
+    return () => { locationListeners.current.delete(listener) }
+  }, [])
+
+  const sendLocation = useCallback((lat: number, lng: number) => {
+    const connection = connectionRef.current
+    if (connection?.state !== HubConnectionState.Connected) return // offline: skip this tick, the next one follows
+    connection.invoke('UpdateLocation', userId, lat, lng).catch(() => { /* lost position is fine */ })
+  }, [userId])
+
   const value = useMemo<RealtimeContextValue>(() => ({
-    status, notifications, onNotification, onChatMessage, joinRideChat, leaveRideChat, sendChat,
-  }), [status, notifications, onNotification, onChatMessage, joinRideChat, leaveRideChat, sendChat])
+    status, notifications, onNotification, onChatMessage, joinRideChat, leaveRideChat, sendChat, onDriverLocation, sendLocation,
+  }), [status, notifications, onNotification, onChatMessage, joinRideChat, leaveRideChat, sendChat, onDriverLocation, sendLocation])
 
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>
 }

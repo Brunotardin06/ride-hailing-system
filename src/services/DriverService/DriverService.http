@@ -1,10 +1,48 @@
-@DriverService_HostAddress = http://localhost:5002
+@host = http://localhost:5002
+@emma = 11111111-1111-1111-1111-000000000001
 
-GET {{DriverService_HostAddress}}/health
+GET {{host}}/health
+
+###
+
+# All drivers
+GET {{host}}/api/drivers
 
 ###
 
-GET {{DriverService_HostAddress}}/openapi/v1.json
-Accept: application/json
+# One driver
+GET {{host}}/api/drivers/{{emma}}
 
 ###
+
+# Go offline / online
+PUT {{host}}/api/drivers/{{emma}}/availability
+Content-Type: application/json
+
+{ "isAvailable": true }
+
+###
+
+# Pending offers of Emma (created by MatchingService via gRPC after a ride request; copy an offer id)
+GET {{host}}/api/drivers/{{emma}}/offers?status=Pending
+
+###
+
+@offerId = paste-offer-id-here
+
+POST {{host}}/api/offers/{{offerId}}/accept
+Content-Type: application/json
+
+{ "driverId": "{{emma}}" }
+
+###
+
+POST {{host}}/api/offers/{{offerId}}/reject
+Content-Type: application/json
+
+{ "driverId": "{{emma}}" }
+
+###
+
+# Reset demo state
+POST {{host}}/api/dev/reset

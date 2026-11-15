@@ -1,22 +1,21 @@
-using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
-using RideHailing.Shared.Metrics;
 
 namespace RideHailing.Shared.Messaging;
 
 public interface IMessagePublisher
 {
-    /// <summary>Publishes the envelope to the events exchange and waits for the broker's confirmation.</summary>
+    /// <summary>Publishes to the events exchange and waits until the broker confirms it stored the message.</summary>
     Task PublishAsync(MessageEnvelope message, CancellationToken ct = default);
 }
 
 /// <summary>
-/// Publishes to the topic exchange with <b>publisher confirms</b>: PublishAsync only completes after
-/// RabbitMQ has accepted (and persisted) the message, otherwise it throws.
+/// Publishes with <b>publisher confirms</b>: PublishAsync only completes after RabbitMQ accepted and persisted
+/// the message; otherwise it throws (and the outbox will try again).
+/// Services with a database do not call this directly: they write to the outbox, and the OutboxDispatcher calls it.
 /// </summary>
-public sealed class RabbitMqPublisher(RabbitMqConnection connection, IMetricsReporter metrics, ILogger<RabbitMqPublisher> logger)
+public sealed class RabbitMqPublisher(RabbitMqConnection connection, ILogger<RabbitMqPublisher> logger)
     : IMessagePublisher, IAsyncDisposable
 {
     // A channel must not be used by several threads at once, so publishes are serialised.
@@ -42,18 +41,12 @@ public sealed class RabbitMqPublisher(RabbitMqConnection connection, IMetricsRep
                 Type = message.EventType,
                 AppId = message.Source,
                 ContentType = "application/json",
-                DeliveryMode = DeliveryModes.Persistent, // survive a broker restart
-                Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+                DeliveryMode = DeliveryModes.Persistent, // written to disk: survives a broker restart
             };
-
-            message.PublishedAt = DateTimeOffset.UtcNow; // start of the RabbitMQ "delivery" measurement
             var body = JsonSerializer.SerializeToUtf8Bytes(message, Json.Options);
 
-            // Publish-confirm time: BasicPublish → broker confirmed (persisted) the message. This is NOT the
-            // time until a consumer has processed it; for that see the "delivery"/"processing" metrics.
-            var stopwatch = Stopwatch.StartNew();
+            // exchange + routing key (= event type). The exchange copies the message to every bound queue.
             await _channel.BasicPublishAsync(RabbitMqTopology.EventsExchange, message.EventType, mandatory: false, properties, body, ct);
-            metrics.Record(Mechanisms.RabbitMq, MetricKinds.PublishConfirm, message.EventType, stopwatch.Elapsed.TotalMilliseconds, true, message.CorrelationId);
             logger.LogInformation("Published {EventType} {EventId} (correlation {CorrelationId})",
                 message.EventType, message.EventId, message.CorrelationId);
         }

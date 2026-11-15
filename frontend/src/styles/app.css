@@ -252,6 +252,144 @@ hr {
   font-size: 13px;
 }
 
+/* ---------- Driver tracker (live location) ---------- */
+.tracker-text {
+  margin: 16px 0 8px;
+  font-weight: 600;
+}
+
+.tracker-text--muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Leaflet map (TripMap). Circle markers are SVG paths: colours via CSS classes. */
+.trip-map {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  z-index: 0; /* keep the map below toasts and menus */
+}
+
+.trip-map-route {
+  stroke: #687083;
+  stroke-width: 3;
+  stroke-dasharray: 6 6;
+  fill: none;
+}
+
+.trip-map-pickup {
+  stroke: #ffffff;
+  stroke-width: 2;
+  fill: var(--success);
+  fill-opacity: 1;
+}
+
+.trip-map-destination {
+  stroke: #ffffff;
+  stroke-width: 2;
+  fill: #d03b3b;
+  fill-opacity: 1;
+}
+
+.trip-map-car {
+  stroke: #ffffff;
+  stroke-width: 3;
+  fill: var(--primary);
+  fill-opacity: 1;
+}
+
+/* ---------- Location picker (request ride) ---------- */
+.field-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.location-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.location-field--active input {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.location-row {
+  display: flex;
+  gap: 8px;
+}
+
+.location-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.location-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.location-results button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.location-results li:last-child button {
+  border-bottom: 0;
+}
+
+.location-results button:hover {
+  background: var(--surface-muted);
+}
+
+.location-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.location-chosen {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.map-hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 /* ---------- Live feed ---------- */
 .feed {
   margin: 0;

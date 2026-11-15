@@ -15,7 +15,10 @@ const analytics = <T>(path: string, init?: RequestInit) => request<T>(serviceUrl
 const matching = <T>(path: string, init?: RequestInit) => request<T>(serviceUrls.matching, path, init)
 
 export const ridesApi = {
-  request: (body: { passengerId: string; passengerName: string; pickup: string; destination: string }) =>
+  request: (body: {
+    passengerId: string; passengerName: string; pickup: string; destination: string
+    pickupLat?: number; pickupLng?: number; destinationLat?: number; destinationLng?: number
+  }) =>
     ride<Ride>('/api/rides', json(body)),
   get: (rideId: string) => ride<Ride>(`/api/rides/${rideId}`),
   list: (filter: { passengerId?: string; driverId?: string; limit?: number }) => {

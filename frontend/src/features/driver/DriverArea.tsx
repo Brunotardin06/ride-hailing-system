@@ -8,6 +8,7 @@ import { useRealtime } from '../../realtime/realtimeContext'
 import { DriverContext } from '../../state/areaContexts'
 import { defaultDriverId, useTabState } from '../../state/identity'
 import { errorMessage, useToast } from '../../state/toastContext'
+import { useLocationSimulator } from './useLocationSimulator'
 
 /** Layout for /driver/*: demo driver selection, SignalR connection and shared driver state. */
 export default function DriverArea() {
@@ -77,6 +78,7 @@ function DriverStateProvider({ driverId, drivers, setDrivers, setDriverId, child
   }, [refresh])
 
   const driver = drivers.find((d) => d.id === driverId) ?? null
+  useLocationSimulator(driver, activeRide) // simulated GPS → SignalR → Kafka
 
   return (
     <DriverContext.Provider value={{ drivers, driver, setDriverId, pendingOffers, activeRide, loading, refresh }}>

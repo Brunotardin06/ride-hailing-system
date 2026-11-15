@@ -1,8 +1,8 @@
 using DriverService.Data;
 using DriverService.Models;
+using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Npgsql;
+using RideHailing.Grpc.Rides;
 using RideHailing.Shared.Contracts;
 using RideHailing.Shared.Hosting;
 using RideHailing.Shared.Messaging;
@@ -10,204 +10,203 @@ using RideHailing.Shared.Outbox;
 
 namespace DriverService.Services;
 
-public sealed class OfferOptions
-{
-    /// <summary>How long a driver has to answer an offer before it expires.</summary>
-    public int TimeoutSeconds { get; set; } = 30;
-}
-
-/// <summary>Creating offers (for MatchingService) and accepting/rejecting them (for drivers).</summary>
-public class OfferService(DriverDbContext db, OutboxSignal outboxSignal, IOptions<OfferOptions> options, ILogger<OfferService> logger)
+/// <summary>
+/// Offer logic. Entry points that call it:
+///   - REST     (OffersController, DriversController)    → accept / reject / list
+///   - gRPC     (DriversGrpcService ← MatchingService)   → create
+///   - gRPC client → RideService                         → assign the ride on accept
+///   - RabbitMQ (DriverMessageHandler)                   → ride completed / cancelled
+///   - Timer    (OfferExpiryService)                     → expire
+///
+/// Every change writes its event to the OUTBOX in the same SaveChanges (no "saved but not published").
+/// </summary>
+public class OfferService(DriverDbContext db, Rides.RidesClient rides, IConfiguration configuration, ILogger<OfferService> logger)
 {
     public const string Source = "driver-service";
 
-    /// <summary>
-    /// Reserves the driver and stores the offer. Idempotent: a repeated request with the same
-    /// RequestKey returns the existing offer (created = false) instead of creating a second one.
-    /// </summary>
-    public async Task<(RideOffer Offer, bool Created)> CreateOfferAsync(CreateOfferRequest request, Guid correlationId, CancellationToken ct)
+    private TimeSpan OfferTimeout => TimeSpan.FromSeconds(configuration.GetValue("Offers:TimeoutSeconds", 30));
+
+    public async Task<List<RideOffer>> GetOffersAsync(Guid driverId, OfferStatus? status, CancellationToken ct)
     {
-        var existing = await db.Offers.FirstOrDefaultAsync(o => o.RequestKey == request.RequestKey, ct);
-        if (existing is not null) return (existing, false);
+        var query = db.Offers.AsNoTracking().Where(o => o.DriverId == driverId);
+        if (status is not null) query = query.Where(o => o.Status == status);
+        return await query.OrderByDescending(o => o.CreatedAt).Take(50).ToListAsync(ct);
+    }
 
-        if (await db.ClosedRides.AnyAsync(c => c.RideId == request.RideId, ct))
-            throw new GoneException($"Ride {request.RideId} was cancelled.");
+    /// <summary>Reserves the driver (Available → Offered) and stores a Pending offer + ride.offer-created, in one transaction.</summary>
+    public async Task<RideOffer> CreateOfferAsync(CreateOfferCommand command, CancellationToken ct)
+    {
+        // Idempotency: Matching retried the same request → return what we created the first time.
+        var existing = await db.Offers.AsNoTracking().FirstOrDefaultAsync(o => o.RequestKey == command.RequestKey, ct);
+        if (existing is not null) return existing;
 
-        var driver = await db.Drivers.FindAsync([request.DriverId], ct) ?? throw new NotFoundException("Driver not found.");
-        driver.ReserveFor(request.RideId); // throws Conflict if the driver is no longer available
+        var driver = await db.Drivers.FindAsync([command.DriverId], ct) ?? throw new NotFoundException("Driver not found.");
+        driver.ReserveFor(command.RideId); // throws 409 if the driver is not Available
 
         var now = DateTimeOffset.UtcNow;
         var offer = new RideOffer
         {
             Id = Guid.NewGuid(),
-            RequestKey = request.RequestKey,
-            RideId = request.RideId,
-            CorrelationId = correlationId,
-            DriverId = driver.Id,
-            PassengerId = request.PassengerId,
-            PassengerName = request.PassengerName,
-            Pickup = request.Pickup,
-            Destination = request.Destination,
-            Attempt = request.Attempt,
-            IsExperiment = driver.IsExperimentDriver,
+            RequestKey = command.RequestKey,
+            RideId = command.RideId,
+            CorrelationId = command.CorrelationId,
+            DriverId = command.DriverId,
+            PassengerId = command.PassengerId,
+            PassengerName = command.PassengerName,
+            Pickup = command.Pickup,
+            Destination = command.Destination,
+            PickupLat = command.PickupLat,
+            PickupLng = command.PickupLng,
+            DestinationLat = command.DestinationLat,
+            DestinationLng = command.DestinationLng,
+            Attempt = command.Attempt,
             CreatedAt = now,
-            ExpiresAt = now.AddSeconds(options.Value.TimeoutSeconds),
+            ExpiresAt = now + OfferTimeout,
         };
         db.Offers.Add(offer);
 
-        var payload = new RideOfferCreatedPayload(offer.Id, offer.RideId, driver.Id, driver.Name, offer.PassengerId,
-            offer.PassengerName, offer.Pickup, offer.Destination, offer.Attempt, offer.ExpiresAt);
-        db.AddToOutbox(MessageEnvelope.Create(EventTypes.RideOfferCreated, correlationId, Source, payload), OutboxDestinations.RabbitMq);
+        // → RealtimeService shows the offer on the driver's screen.
+        db.AddToOutbox(MessageEnvelope.Create(EventTypes.RideOfferCreated, offer.CorrelationId, Source,
+            new RideOfferCreatedPayload(offer.Id, offer.RideId, driver.Id, driver.Name, offer.PassengerId, offer.PassengerName,
+                offer.Pickup, offer.Destination, offer.Attempt, offer.ExpiresAt)));
+
+        await db.SaveChangesAsync(ct);
+        return offer;
+    }
+
+    /// <summary>
+    /// Driver accepts → ask RideService (gRPC, synchronous) to assign the ride BEFORE confirming locally.
+    ///   OK                  → offer Accepted, driver Busy. RideService publishes ride.assigned.
+    ///   FailedPrecondition  → the ride is no longer waiting (e.g. passenger just cancelled) → offer Cancelled,
+    ///                         driver free, 409 to the driver. This immediate answer is WHY this call is synchronous.
+    ///   Unavailable/timeout → 503, nothing changed: the offer stays Pending and the driver can try again.
+    /// </summary>
+    public async Task<RideOffer> AcceptAsync(Guid offerId, Guid driverId, CancellationToken ct)
+    {
+        var (offer, driver) = await LoadPendingAsync(offerId, driverId, ct);
 
         try
         {
-            await SaveAsync(ct);
+            await rides.AssignDriverAsync(new AssignDriverRequest
+            {
+                RideId = offer.RideId.ToString(),
+                DriverId = driver.Id.ToString(),
+                DriverName = driver.Name,
+                Vehicle = driver.Vehicle,
+                LicensePlate = driver.LicensePlate,
+            }, deadline: DateTime.UtcNow.AddSeconds(5), cancellationToken: ct);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (RpcException ex) when (ex.StatusCode is StatusCode.FailedPrecondition or StatusCode.NotFound)
         {
-            // Another offer reserved this driver at the same moment (optimistic concurrency on Driver).
-            throw new ConflictException($"Driver {driver.Name} was just reserved by another offer.");
+            offer.Respond(OfferStatus.Cancelled);
+            driver.Release(offer.RideId);
+            await db.SaveChangesAsync(ct);
+            throw new ConflictException("This ride is no longer available.");
         }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        catch (RpcException ex)
         {
-            // The same request arrived twice concurrently; the other one won.
-            db.ChangeTracker.Clear();
-            return (await db.Offers.FirstAsync(o => o.RequestKey == request.RequestKey, ct), false);
-        }
-
-        logger.LogInformation("Offer {OfferId}: ride {RideId} → driver {Driver} (attempt {Attempt})", offer.Id, offer.RideId, driver.Name, offer.Attempt);
-        return (offer, true);
-    }
-
-    public async Task<RideOffer> AcceptAsync(Guid offerId, Guid driverId, CancellationToken ct)
-    {
-        var (offer, driver) = await LoadForResponseAsync(offerId, driverId, ct);
-
-        if (offer.ExpiresAt <= DateTimeOffset.UtcNow)
-        {
-            await CloseOfferAsync(offer, driver, OfferStatus.Expired, "Expired", ct);
-            throw new ConflictException("The offer has expired.");
+            logger.LogWarning("RideService did not answer AssignDriver ({Status}): {Detail}", ex.StatusCode, ex.Status.Detail);
+            throw new ServiceUnavailableException("Could not confirm the ride right now. Please try again.");
         }
 
         offer.Respond(OfferStatus.Accepted);
-        driver.ConfirmRide(offer.RideId);
-
-        var payload = new DriverAcceptedRidePayload(offer.Id, offer.RideId, driver.Id, driver.Name, driver.Vehicle, driver.LicensePlate, offer.PassengerId);
-        db.AddToOutbox(MessageEnvelope.Create(EventTypes.DriverAcceptedRide, offer.CorrelationId, Source, payload), OutboxDestinations.RabbitMq);
-        await SaveAsync(ct);
-
-        logger.LogInformation("Driver {Driver} accepted ride {RideId}", driver.Name, offer.RideId);
+        driver.ConfirmRide(offer.RideId); // Offered → Busy
+        await db.SaveChangesAsync(ct);
         return offer;
     }
 
     public async Task<RideOffer> RejectAsync(Guid offerId, Guid driverId, CancellationToken ct)
     {
-        var (offer, driver) = await LoadForResponseAsync(offerId, driverId, ct);
-        await CloseOfferAsync(offer, driver, OfferStatus.Rejected, "Rejected by driver", ct);
-        logger.LogInformation("Driver {Driver} rejected ride {RideId}", driver.Name, offer.RideId);
+        var (offer, driver) = await LoadPendingAsync(offerId, driverId, ct);
+        await DeclineAsync(offer, driver, OfferStatus.Rejected, "Rejected by driver", ct);
+        await db.SaveChangesAsync(ct);
         return offer;
     }
 
-    /// <summary>Called periodically by <see cref="OfferExpiryService"/>.</summary>
-    public async Task<int> ExpireDueOffersAsync(CancellationToken ct)
+    /// <summary>Called by OfferExpiryService: Pending offers older than the timeout count as rejected.</summary>
+    public async Task<int> ExpireOverdueOffersAsync(CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
-        var due = await db.Offers.Where(o => o.Status == OfferStatus.Pending && !o.IsExperiment && o.ExpiresAt <= now).ToListAsync(ct);
-        foreach (var offer in due)
+        var overdue = await db.Offers
+            .Where(o => o.Status == OfferStatus.Pending && o.ExpiresAt < DateTimeOffset.UtcNow)
+            .ToListAsync(ct);
+
+        foreach (var offer in overdue)
         {
             var driver = await db.Drivers.FindAsync([offer.DriverId], ct);
             if (driver is null) continue;
-            await CloseOfferAsync(offer, driver, OfferStatus.Expired, "Offer expired (no answer)", ct);
-            logger.LogInformation("Offer {OfferId} for ride {RideId} expired", offer.Id, offer.RideId);
+            await DeclineAsync(offer, driver, OfferStatus.Expired, "Offer expired", ct);
         }
-        return due.Count;
+
+        if (overdue.Count > 0) await db.SaveChangesAsync(ct);
+        return overdue.Count;
     }
 
-    // ---------- Events from RideService ----------
-
+    /// <summary>ride.completed (from RideService): the driver is free again and gets +1 completed ride.</summary>
     public async Task HandleRideCompletedAsync(MessageEnvelope message, CancellationToken ct)
     {
-        if (await db.IsProcessedAsync(message.EventId, ct)) return;
+        if (await db.IsProcessedAsync(message.EventId, ct)) return; // duplicate delivery
+
         var ride = message.PayloadAs<RideStatusChangedPayload>();
         if (ride.DriverId is { } driverId && await db.Drivers.FindAsync([driverId], ct) is { } driver)
-            driver.FinishRide(ride.RideId);
+            driver.FinishRide(ride.RideId); // Busy → Available (no-op if already done)
+
         db.MarkProcessed(message);
-        await SaveAsync(ct);
+        await db.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// ride.cancelled (from RideService): withdraw a pending offer for this ride and free its driver,
+    /// or free the assigned driver if the ride was already accepted.
+    /// </summary>
     public async Task HandleRideCancelledAsync(MessageEnvelope message, CancellationToken ct)
     {
         if (await db.IsProcessedAsync(message.EventId, ct)) return;
+
         var ride = message.PayloadAs<RideStatusChangedPayload>();
 
-        if (!await db.ClosedRides.AnyAsync(c => c.RideId == ride.RideId, ct))
-            db.ClosedRides.Add(new ClosedRide { RideId = ride.RideId, ClosedAt = DateTimeOffset.UtcNow });
-
-        // Withdraw a pending offer and free every driver that is reserved for / driving this ride.
         var pending = await db.Offers.Where(o => o.RideId == ride.RideId && o.Status == OfferStatus.Pending).ToListAsync(ct);
         foreach (var offer in pending)
         {
             offer.Respond(OfferStatus.Cancelled);
-            var withdrawn = new RideOfferWithdrawnPayload(offer.Id, offer.RideId, offer.DriverId, "The passenger cancelled the ride.");
-            db.AddToOutbox(MessageEnvelope.Create(EventTypes.RideOfferWithdrawn, offer.CorrelationId, Source, withdrawn, message.EventId),
-                OutboxDestinations.RabbitMq);
+            db.AddToOutbox(MessageEnvelope.Create(EventTypes.RideOfferWithdrawn, offer.CorrelationId, Source,
+                new RideOfferWithdrawnPayload(offer.Id, offer.RideId, offer.DriverId, "Ride cancelled by passenger"),
+                causationId: message.EventId));
         }
 
+        // Every driver still holding this ride (Offered or Busy) becomes Available again.
         var drivers = await db.Drivers.Where(d => d.CurrentRideId == ride.RideId).ToListAsync(ct);
         foreach (var driver in drivers) driver.Release(ride.RideId);
 
+        logger.LogInformation("Ride {RideId} cancelled: {Offers} offer(s) withdrawn, {Drivers} driver(s) released",
+            ride.RideId, pending.Count, drivers.Count);
+
         db.MarkProcessed(message);
-        await SaveAsync(ct);
+        await db.SaveChangesAsync(ct);
     }
 
-    // ---------- Helpers ----------
+    /// <summary>Reject / expire: free the driver and tell MatchingService to try the next one.</summary>
+    private async Task DeclineAsync(RideOffer offer, Driver driver, OfferStatus outcome, string reason, CancellationToken ct)
+    {
+        offer.Respond(outcome);
+        driver.Release(offer.RideId); // Offered → Available
 
-    private async Task<(RideOffer, Driver)> LoadForResponseAsync(Guid offerId, Guid driverId, CancellationToken ct)
+        // Drivers already tried for this ride (incl. this one), so MatchingService never offers it to them again.
+        var excluded = await db.Offers.Where(o => o.RideId == offer.RideId).Select(o => o.DriverId).Distinct().ToListAsync(ct);
+        if (!excluded.Contains(driver.Id)) excluded.Add(driver.Id);
+
+        db.AddToOutbox(MessageEnvelope.Create(EventTypes.DriverRejectedRide, offer.CorrelationId, Source,
+            new DriverRejectedRidePayload(offer.Id, offer.RideId, driver.Id, driver.Name, offer.PassengerId, offer.PassengerName,
+                offer.Pickup, offer.Destination, offer.Attempt, reason, excluded,
+                offer.PickupLat, offer.PickupLng, offer.DestinationLat, offer.DestinationLng)));
+    }
+
+    private async Task<(RideOffer Offer, Driver Driver)> LoadPendingAsync(Guid offerId, Guid driverId, CancellationToken ct)
     {
         var offer = await db.Offers.FindAsync([offerId], ct) ?? throw new NotFoundException("Offer not found.");
         if (offer.DriverId != driverId) throw new ForbiddenException("This offer belongs to another driver.");
         if (offer.Status != OfferStatus.Pending) throw new ConflictException($"Offer is already {offer.Status}.");
+
         var driver = await db.Drivers.FindAsync([driverId], ct) ?? throw new NotFoundException("Driver not found.");
         return (offer, driver);
-    }
-
-    /// <summary>Rejected or expired: free the driver and ask MatchingService to try the next driver.</summary>
-    private async Task CloseOfferAsync(RideOffer offer, Driver driver, OfferStatus outcome, string reason, CancellationToken ct)
-    {
-        offer.Respond(outcome);
-        driver.Release(offer.RideId);
-
-        var triedDrivers = await db.Offers.Where(o => o.RideId == offer.RideId).Select(o => o.DriverId).Distinct().ToListAsync(ct);
-        var payload = new DriverRejectedRidePayload(offer.Id, offer.RideId, driver.Id, driver.Name, offer.PassengerId,
-            offer.PassengerName, offer.Pickup, offer.Destination, offer.Attempt, reason, triedDrivers);
-        db.AddToOutbox(MessageEnvelope.Create(EventTypes.DriverRejectedRide, offer.CorrelationId, Source, payload), OutboxDestinations.RabbitMq);
-        await SaveAsync(ct);
-    }
-
-    private async Task SaveAsync(CancellationToken ct)
-    {
-        await db.SaveChangesAsync(ct);
-        outboxSignal.Notify();
-    }
-}
-
-/// <summary>Expires unanswered offers every few seconds, so a ride never waits forever for a driver.</summary>
-public class OfferExpiryService(IServiceScopeFactory scopeFactory, ILogger<OfferExpiryService> logger) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
-        {
-            try
-            {
-                await using var scope = scopeFactory.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<OfferService>().ExpireDueOffersAsync(stoppingToken);
-            }
-            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-            {
-                logger.LogWarning("Expiring offers failed: {Message}", ex.Message);
-            }
-        }
     }
 }

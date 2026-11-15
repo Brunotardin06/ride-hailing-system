@@ -9,6 +9,8 @@ COPY src/shared/RideHailing.Shared/RideHailing.Shared.csproj src/shared/RideHail
 COPY src/services/DriverService/DriverService.csproj src/services/DriverService/
 RUN dotnet restore src/services/DriverService/DriverService.csproj
 COPY src/shared/ src/shared/
+# gRPC client contract owned by RideService (see DriverService.csproj).
+COPY src/services/RideService/Protos/ src/services/RideService/Protos/
 COPY src/services/DriverService/ src/services/DriverService/
 RUN dotnet publish src/services/DriverService/DriverService.csproj -c Release -o /app/publish --no-restore
 

@@ -7,6 +7,7 @@ import LiveFeed from '../../components/ui/LiveFeed'
 import PageHeader from '../../components/ui/PageHeader'
 import RideStatusBadge from '../../components/ui/RideStatusBadge'
 import RideTimeline from '../../components/ui/RideTimeline'
+import DriverTracker from './DriverTracker'
 import { useRealtime } from '../../realtime/realtimeContext'
 import { usePassenger } from '../../state/areaContexts'
 import { errorMessage, useToast } from '../../state/toastContext'
@@ -80,17 +81,20 @@ export default function CurrentRidePage() {
 
         <Card title="Your driver">
           {ride.driverName ? (
-            <div className="person">
-              <span className="avatar">{ride.driverName[0]}</span>
-              <div>
-                <p className="person-name">{ride.driverName}</p>
-                <p className="card-subtitle">{ride.vehicle}</p>
-                <p className="plate">{ride.licensePlate}</p>
+            <>
+              <div className="person">
+                <span className="avatar">{ride.driverName[0]}</span>
+                <div>
+                  <p className="person-name">{ride.driverName}</p>
+                  <p className="card-subtitle">{ride.vehicle}</p>
+                  <p className="plate">{ride.licensePlate}</p>
+                </div>
+                {(ride.status === 'Assigned' || ride.status === 'InProgress') && (
+                  <Link to="/passenger/chat" className="button">Chat</Link>
+                )}
               </div>
-              {(ride.status === 'Assigned' || ride.status === 'InProgress') && (
-                <Link to="/passenger/chat" className="button">Chat</Link>
-              )}
-            </div>
+              {(ride.status === 'Assigned' || ride.status === 'InProgress') && <DriverTracker ride={ride} />}
+            </>
           ) : (
             <EmptyState icon="user" title="No driver assigned yet" message="Driver details appear once a driver accepts." />
           )}

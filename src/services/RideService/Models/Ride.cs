@@ -1,3 +1,4 @@
+using RideHailing.Shared.Contracts;
 using RideHailing.Shared.Hosting;
 
 namespace RideService.Models;
@@ -13,15 +14,8 @@ public enum RideStatus
 }
 
 /// <summary>
-/// How RideService hands the ride to MatchingService (Experiment A):
-/// RabbitMq = asynchronous (publish ride.requested, respond immediately);
-/// Rest = synchronous (call POST /api/matching/requests and wait for the outcome).
-/// </summary>
-public enum MatchingMode { RabbitMq, Rest }
-
-/// <summary>
-/// A ride and its lifecycle. All status changes go through the methods below, which enforce the
-/// allowed transitions, so the status can never become inconsistent:
+/// A ride and its lifecycle. RideService is the source of truth for ride status.
+/// Every status change goes through a method below, which checks the transition is allowed:
 ///
 ///   Requested ──► Assigned ──► InProgress ──► Completed
 ///      │             │
@@ -30,6 +24,7 @@ public enum MatchingMode { RabbitMq, Rest }
 /// </summary>
 public class Ride
 {
+    // State machine as data: "from this status, you may go to these statuses".
     private static readonly Dictionary<RideStatus, RideStatus[]> AllowedTransitions = new()
     {
         [RideStatus.Requested] = [RideStatus.Assigned, RideStatus.Cancelled, RideStatus.NoDriverAvailable],
@@ -43,13 +38,24 @@ public class Ride
     public static readonly RideStatus[] ActiveStatuses = [RideStatus.Requested, RideStatus.Assigned, RideStatus.InProgress];
 
     public Guid Id { get; private set; }
+
+    /// <summary>Id that follows this ride through every message and log line (used from the RabbitMQ phase on).</summary>
     public Guid CorrelationId { get; private set; }
+
     public Guid PassengerId { get; private set; }
     public string PassengerName { get; private set; } = "";
     public string Pickup { get; private set; } = "";
     public string Destination { get; private set; } = "";
+
+    // Coordinates picked on the map (or of a known place). Null for older rides / free text without a location.
+    public double? PickupLat { get; private set; }
+    public double? PickupLng { get; private set; }
+    public double? DestinationLat { get; private set; }
+    public double? DestinationLng { get; private set; }
+
     public RideStatus Status { get; private set; }
 
+    // Driver data is COPIED here when the driver is assigned, so reading a ride never needs DriverService.
     public Guid? DriverId { get; private set; }
     public string? DriverName { get; private set; }
     public string? Vehicle { get; private set; }
@@ -62,49 +68,30 @@ public class Ride
     public DateTimeOffset? CancelledAt { get; private set; }
     public string? StatusReason { get; private set; }
 
-    /// <summary>Communication path used to request matching for this ride.</summary>
-    public MatchingMode MatchingMode { get; private set; }
-
-    /// <summary>Set for rides created by Experiment A (isolated from demo rides and business analytics).</summary>
-    public Guid? ExperimentRunId { get; private set; }
-
-    /// <summary>
-    /// When the first offer for this ride was created (DriverService time). While a ride is Requested and this
-    /// is null, matching is still pending, e.g. waiting in the RabbitMQ queue.
-    /// </summary>
-    public DateTimeOffset? OfferCreatedAt { get; private set; }
-    public string? OfferedDriverName { get; private set; }
-
-    /// <summary>Optimistic concurrency token (PostgreSQL xmin): concurrent updates of the same ride fail instead of overwriting each other.</summary>
+    /// <summary>Optimistic concurrency token (PostgreSQL xmin).</summary>
     public uint Version { get; private set; }
 
-    private Ride() { }
+    private Ride() { } // EF Core needs a parameterless constructor; our code uses Request(...)
 
-    public static Ride Request(Guid passengerId, string passengerName, string pickup, string destination, Guid correlationId,
-        MatchingMode matchingMode = MatchingMode.RabbitMq, Guid? experimentRunId = null) => new()
+    /// <summary>Factory: the only way to create a ride, so every new ride starts valid (status Requested).</summary>
+    public static Ride Request(Guid passengerId, string passengerName, string pickup, string destination,
+        GeoPoint? pickupAt = null, GeoPoint? destinationAt = null) => new()
     {
-        MatchingMode = matchingMode,
-        ExperimentRunId = experimentRunId,
         Id = Guid.NewGuid(),
-        CorrelationId = correlationId,
+        CorrelationId = Guid.NewGuid(),
         PassengerId = passengerId,
         PassengerName = passengerName,
         Pickup = pickup,
         Destination = destination,
+        PickupLat = pickupAt?.Lat,
+        PickupLng = pickupAt?.Lng,
+        DestinationLat = destinationAt?.Lat,
+        DestinationLng = destinationAt?.Lng,
         Status = RideStatus.Requested,
         RequestedAt = DateTimeOffset.UtcNow,
     };
 
     public bool IsActive => ActiveStatuses.Contains(Status);
-
-    public static bool CanTransition(RideStatus from, RideStatus to) => AllowedTransitions[from].Contains(to);
-
-    /// <summary>Records that matching produced an offer (keeps the first offer time; later offers update the name).</summary>
-    public void RecordOfferCreated(string? driverName, DateTimeOffset createdAt)
-    {
-        OfferCreatedAt ??= createdAt;
-        if (driverName is not null) OfferedDriverName = driverName;
-    }
 
     public void AssignDriver(Guid driverId, string driverName, string vehicle, string licensePlate)
     {
@@ -130,8 +117,10 @@ public class Ride
         CompletedAt = DateTimeOffset.UtcNow;
     }
 
-    public void Cancel(string reason)
+    public void Cancel(Guid passengerId, string reason)
     {
+        if (passengerId != PassengerId)
+            throw new ForbiddenException("Only the passenger of this ride can cancel it.");
         TransitionTo(RideStatus.Cancelled);
         CancelledAt = DateTimeOffset.UtcNow;
         StatusReason = reason;
@@ -151,8 +140,8 @@ public class Ride
 
     private void TransitionTo(RideStatus next)
     {
-        if (!CanTransition(Status, next))
-            throw new ConflictException($"Ride {Id} cannot go from {Status} to {next}.");
+        if (!AllowedTransitions[Status].Contains(next))
+            throw new ConflictException($"Ride cannot go from {Status} to {next}.");
         Status = next;
     }
 }

@@ -9,6 +9,11 @@ export interface Ride {
   passengerName: string
   pickup: string
   destination: string
+  /** Coordinates picked on the map (null for rides without a known location). */
+  pickupLat: number | null
+  pickupLng: number | null
+  destinationLat: number | null
+  destinationLng: number | null
   status: RideStatus
   driverId: string | null
   driverName: string | null
@@ -57,9 +62,22 @@ export interface Offer {
   createdAt: string
   expiresAt: string
   respondedAt: string | null
+  pickupLat: number | null
+  pickupLng: number | null
+  destinationLat: number | null
+  destinationLng: number | null
 }
 
 // ---------- Realtime (SignalR) ----------
+
+/** Position of the passenger's driver, pushed every ~2 s while the ride is Assigned / InProgress. */
+export interface DriverLocation {
+  rideId: string
+  driverId: string
+  lat: number
+  lng: number
+  recordedAt: string
+}
 
 export interface Notification {
   id: string
